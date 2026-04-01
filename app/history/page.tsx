@@ -808,6 +808,22 @@ export default function TransactionsPage() {
                   <p className="text-xs text-zinc-400 truncate">From: {rulePrompt.narration}</p>
                 )}
               </div>
+              {(() => {
+                const ruleSubcatOptions = getSubcategories(rulePrompt.category)
+                return ruleSubcatOptions.length > 0 ? (
+                  <div className="flex flex-col gap-1 mb-4">
+                    <label className="text-xs text-zinc-500 font-medium">Subcategory</label>
+                    <select
+                      value={rulePrompt.subcategory ?? ''}
+                      onChange={e => setRulePrompt(p => p ? { ...p, subcategory: e.target.value || null } : p)}
+                      className="border border-zinc-300 rounded-lg px-3 py-2 text-sm bg-white text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">No subcategory</option>
+                      {ruleSubcatOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                ) : null
+              })()}
               {existingRule && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm">
                   <p className="text-amber-800 font-medium mb-0.5">Existing rule found</p>
