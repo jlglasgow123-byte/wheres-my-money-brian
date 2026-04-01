@@ -367,7 +367,7 @@ export default function DashboardPage() {
                             innerRadius={70}
                             outerRadius={100}
                             paddingAngle={2}
-                            onClick={(d) => setDrillCategory(d.cat === drillCategory ? null : d.cat)}
+                            onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setDrillCategory(cat === drillCategory ? null : cat) }}
                             style={{ cursor: 'pointer' }}
                           >
                             {byCategory.map(({ cat, colour }) => (
