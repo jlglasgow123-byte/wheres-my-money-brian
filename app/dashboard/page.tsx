@@ -318,7 +318,7 @@ export default function DashboardPage() {
                           <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                           <Tooltip
-                            formatter={(value: number, name: string) => [fmt(value), name]}
+                            formatter={(value: number | string, name: string) => [fmt(Number(value)), name]}
                             contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
                           />
                           <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -348,7 +348,7 @@ export default function DashboardPage() {
                           <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
                           <Tooltip
-                            formatter={(value: number) => [fmt(value), timeTab]}
+                            formatter={(value: number | string) => [fmt(Number(value)), timeTab]}
                             contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
                           />
                           <Bar dataKey={dataKey} name={timeTab} fill={colour} radius={[3, 3, 0, 0]} />
