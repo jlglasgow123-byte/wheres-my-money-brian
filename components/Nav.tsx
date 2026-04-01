@@ -14,7 +14,7 @@ const links = [
   { href: '/help', label: 'Help' },
 ]
 
-const HIDDEN_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/privacy']
+const HIDDEN_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/privacy', '/home-test']
 
 export default function Nav() {
   const pathname = usePathname()
