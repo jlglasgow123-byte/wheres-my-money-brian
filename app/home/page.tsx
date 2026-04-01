@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useHistoryStore } from '@/lib/store/history'
@@ -18,11 +18,12 @@ function fmt(n: number) {
   return n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
 }
 
-function getCurrentMonthBounds() {
+function getLastMonthBounds() {
   const now = new Date()
-  const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-  const label = now.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
+  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10)
+  const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10)
+  const label = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    .toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
   return { from, to, label }
 }
 
@@ -37,20 +38,12 @@ function DonutTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   )
 }
 
-function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }) {
-  return (
-    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-      <tspan x={cx} dy="-0.5em" fontSize="13" fill="#71717a">Total spent</tspan>
-      <tspan x={cx} dy="1.7em" fontSize="18" fontWeight="700" fill="#18181b">{fmt(total)}</tspan>
-    </text>
-  )
-}
-
 export default function HomePage() {
   const { transactions, loaded } = useHistoryStore()
   const { user } = useAuthStore()
+  const [drillCategory, setDrillCategory] = useState<string | null>(null)
 
-  const { from, to, label } = getCurrentMonthBounds()
+  const { from, to, label } = getLastMonthBounds()
 
   const monthTxs = useMemo(
     () => transactions.filter(tx => tx.date >= from && tx.date <= to && tx.debit != null),
@@ -88,77 +81,68 @@ export default function HomePage() {
       <div className="max-w-2xl mx-auto flex flex-col items-center">
 
         {/* Greeting */}
-        <div className="w-full mb-8">
+        <div className="w-full mb-6">
           <h1 className="text-2xl font-bold text-zinc-900">Hey, {firstName}.</h1>
           <p className="text-sm text-zinc-500 mt-1">{label}</p>
         </div>
 
         {/* Donut — hero */}
-        {hasData ? (
-          <div className="w-full bg-white border border-zinc-200 rounded-2xl p-8 mb-6">
-            <div className="flex flex-col lg:flex-row items-center gap-8">
-              {/* Chart */}
-              <div className="w-full lg:w-64 shrink-0" style={{ height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={byCategory}
-                      dataKey="amount"
-                      nameKey="cat"
-                      innerRadius={75}
-                      outerRadius={115}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                    >
-                      {byCategory.map((entry) => (
-                        <Cell key={entry.cat} fill={entry.colour} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={<DonutTooltip />}
-                      wrapperStyle={{ zIndex: 50 }}
-                    />
-                    {byCategory.length > 0 && (
-                      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-0.5em" fontSize="12" fill="#71717a">Total spent</tspan>
-                        <tspan x="50%" dy="1.6em" fontSize="17" fontWeight="700" fill="#18181b">{fmt(totalSpent)}</tspan>
-                      </text>
-                    )}
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+        <div className="w-full bg-white rounded-xl border border-zinc-200 p-5 mb-6">
+          <h2 className="text-sm font-semibold text-zinc-900 mb-4">Spending by category</h2>
+          {!hasData ? (
+            <div className="flex flex-col items-center text-center py-10">
+              <p className="text-sm font-medium text-zinc-500 mb-1">No data for {label}</p>
+              <p className="text-xs text-zinc-400">Upload a CSV to see your spending breakdown.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={byCategory}
+                    dataKey="amount"
+                    nameKey="cat"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={72}
+                    outerRadius={105}
+                    paddingAngle={2}
+                    onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setDrillCategory(cat === drillCategory ? null : cat) }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {byCategory.map(({ cat, colour }) => (
+                      <Cell
+                        key={cat}
+                        fill={colour}
+                        opacity={drillCategory && drillCategory !== cat ? 0.35 : 1}
+                        stroke={drillCategory === cat ? '#fff' : 'none'}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<DonutTooltip />} wrapperStyle={{ zIndex: 50 }} />
+                  <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#71717a">Total spent</text>
+                  <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={700} fill="#18181b">{fmt(totalSpent)}</text>
+                </PieChart>
+              </ResponsiveContainer>
 
-              {/* Legend */}
-              <div className="flex-1 w-full">
-                <ul className="space-y-2">
-                  {byCategory.map(item => (
-                    <li key={item.cat} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: item.colour }}
-                        />
-                        <span className="text-sm text-zinc-700 truncate">{item.cat}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-zinc-400">{item.pct.toFixed(1)}%</span>
-                        <span className="text-sm font-medium text-zinc-900 tabular-nums">{fmt(item.amount)}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+              {/* Legend — 2 columns, clickable */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {byCategory.map(({ cat, amount, pct, colour }) => (
+                  <button
+                    key={cat}
+                    onClick={() => setDrillCategory(cat === drillCategory ? null : cat)}
+                    className={`flex items-center gap-2 text-left rounded-lg px-2 py-1 transition-colors ${drillCategory === cat ? 'bg-zinc-100' : 'hover:bg-zinc-50'}`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colour }} />
+                    <span className="text-xs text-zinc-700 truncate flex-1">{cat}</span>
+                    <span className="text-xs text-zinc-400 shrink-0">{pct.toFixed(0)}%</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="w-full bg-white border border-zinc-200 rounded-2xl p-12 mb-6 flex flex-col items-center text-center">
-            <div className="w-24 h-24 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
-              <span className="text-3xl">📂</span>
-            </div>
-            <p className="text-sm font-medium text-zinc-700 mb-1">No data for {label}</p>
-            <p className="text-xs text-zinc-400">Upload a CSV to see your spending breakdown.</p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Action buttons */}
         <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
