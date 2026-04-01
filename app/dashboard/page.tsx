@@ -5,10 +5,28 @@ import { useHistoryStore } from '@/lib/store/history'
 import Spinner from '@/components/Spinner'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts'
+import type { Transaction } from '@/lib/normaliser/types'
 
 type Period = 'This month' | 'Last month' | 'Last 3 months' | 'All time' | 'Custom'
 type GroupBy = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year'
+
+// Foresty colour palette — 12 distinct colours
+const CATEGORY_COLOURS = [
+  '#2d6a4f', // deep forest green
+  '#52b788', // mid green
+  '#95d5b2', // light sage
+  '#1b4332', // very dark green
+  '#74c69d', // soft mint
+  '#40916c', // medium green
+  '#b7e4c7', // pale green
+  '#4a7c59', // muted forest
+  '#081c15', // near black green
+  '#d8f3dc', // very light green
+  '#6a994e', // yellow-green
+  '#386641', // dark olive
+]
 
 function getPeriodBounds(period: Period): { from: string; to: string } | null {
   const now = new Date()
@@ -28,6 +46,13 @@ function getPeriodBounds(period: Period): { from: string; to: string } | null {
     return { from, to }
   }
   return null
+}
+
+function getMonthBounds(yearMonth: string): { from: string; to: string } {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const from = new Date(y, m - 1, 1).toISOString().slice(0, 10)
+  const to = new Date(y, m, 0).toISOString().slice(0, 10)
+  return { from, to }
 }
 
 function getGroupKey(date: string, groupBy: GroupBy): string {
@@ -70,6 +95,32 @@ function fmt(n: number) {
   return n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
 }
 
+function getCurrentYearMonth() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getPrevYearMonth(ym: string) {
+  const [y, m] = ym.split('-').map(Number)
+  const d = new Date(y, m - 2, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function formatYearMonth(ym: string) {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
+}
+
+// Custom donut label
+function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }) {
+  return (
+    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+      <tspan x={cx} dy="-0.4em" fontSize="13" fill="#71717a">Total spent</tspan>
+      <tspan x={cx} dy="1.6em" fontSize="16" fontWeight="600" fill="#18181b">{fmt(total)}</tspan>
+    </text>
+  )
+}
+
 export default function DashboardPage() {
   const { transactions, loaded: historyLoaded } = useHistoryStore()
   const [period, setPeriod] = useState<Period>('This month')
@@ -77,6 +128,17 @@ export default function DashboardPage() {
   const [customTo, setCustomTo] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('Month')
   const [timeTab, setTimeTab] = useState<'Spending' | 'Income' | 'All'>('Spending')
+
+  // Drilldown panel
+  const [drillCategory, setDrillCategory] = useState<string | null>(null)
+
+  // Month-over-month
+  const [momMonth1, setMomMonth1] = useState(getPrevYearMonth(getCurrentYearMonth()))
+  const [momMonth2, setMomMonth2] = useState(getCurrentYearMonth())
+
+  // Collapsed sections
+  const [largestExpanded, setLargestExpanded] = useState(false)
+  const [popularExpanded, setPopularExpanded] = useState(false)
 
   const periodTxs = useMemo(() => {
     if (period === 'Custom') {
@@ -105,8 +167,26 @@ export default function DashboardPage() {
     })
     return Array.from(map.entries())
       .sort((a, b) => b[1] - a[1])
-      .map(([cat, amount]) => ({ cat, amount, pct: totalSpent > 0 ? (amount / totalSpent) * 100 : 0 }))
+      .map(([cat, amount], i) => ({
+        cat,
+        amount,
+        pct: totalSpent > 0 ? (amount / totalSpent) * 100 : 0,
+        colour: CATEGORY_COLOURS[i % CATEGORY_COLOURS.length],
+      }))
   }, [spendingTxs, totalSpent])
+
+  const categoryColourMap = useMemo(() => {
+    const map = new Map<string, string>()
+    byCategory.forEach(({ cat, colour }) => map.set(cat, colour))
+    return map
+  }, [byCategory])
+
+  // Drilldown transactions
+  const drillTxs = useMemo<Transaction[]>(() => {
+    if (!drillCategory) return []
+    return spendingTxs.filter(tx => (tx.category || 'Uncategorised') === drillCategory)
+      .sort((a, b) => (b.debit ?? 0) - (a.debit ?? 0))
+  }, [drillCategory, spendingTxs])
 
   const byPeriod = useMemo(() => {
     const map = new Map<string, { label: string; sortKey: string; amount: number }>()
@@ -129,6 +209,23 @@ export default function DashboardPage() {
     })
     return Array.from(map.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
   }, [incomeTxs, groupBy])
+
+  const byPeriodAll = useMemo(() => {
+    const map = new Map<string, { label: string; sortKey: string; spending: number; income: number }>()
+    spendingTxs.forEach(tx => {
+      const label = getGroupKey(tx.date, groupBy)
+      const sortKey = getSortKey(tx.date, groupBy)
+      const existing = map.get(label)
+      map.set(label, { label, sortKey, spending: (existing?.spending ?? 0) + (tx.debit ?? 0), income: existing?.income ?? 0 })
+    })
+    incomeTxs.forEach(tx => {
+      const label = getGroupKey(tx.date, groupBy)
+      const sortKey = getSortKey(tx.date, groupBy)
+      const existing = map.get(label)
+      map.set(label, { label, sortKey, spending: existing?.spending ?? 0, income: (existing?.income ?? 0) + (tx.credit ?? 0) })
+    })
+    return Array.from(map.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
+  }, [spendingTxs, incomeTxs, groupBy])
 
   const largestTransactions = useMemo(() => {
     const map = new Map<string, number>()
@@ -153,22 +250,21 @@ export default function DashboardPage() {
       .slice(0, 10)
   }, [spendingTxs])
 
-  const byPeriodAll = useMemo(() => {
-    const map = new Map<string, { label: string; sortKey: string; spending: number; income: number }>()
-    spendingTxs.forEach(tx => {
-      const label = getGroupKey(tx.date, groupBy)
-      const sortKey = getSortKey(tx.date, groupBy)
-      const existing = map.get(label)
-      map.set(label, { label, sortKey, spending: (existing?.spending ?? 0) + (tx.debit ?? 0), income: existing?.income ?? 0 })
-    })
-    incomeTxs.forEach(tx => {
-      const label = getGroupKey(tx.date, groupBy)
-      const sortKey = getSortKey(tx.date, groupBy)
-      const existing = map.get(label)
-      map.set(label, { label, sortKey, spending: existing?.spending ?? 0, income: (existing?.income ?? 0) + (tx.credit ?? 0) })
-    })
-    return Array.from(map.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey))
-  }, [spendingTxs, incomeTxs, groupBy])
+  // Month-over-month data
+  const momData = useMemo(() => {
+    const b1 = getMonthBounds(momMonth1)
+    const b2 = getMonthBounds(momMonth2)
+    const m1Txs = transactions.filter(tx => tx.debit != null && tx.date >= b1.from && tx.date <= b1.to)
+    const m2Txs = transactions.filter(tx => tx.debit != null && tx.date >= b2.from && tx.date <= b2.to)
+    const cats = new Set<string>()
+    m1Txs.forEach(tx => cats.add(tx.category || 'Uncategorised'))
+    m2Txs.forEach(tx => cats.add(tx.category || 'Uncategorised'))
+    return Array.from(cats).map(cat => {
+      const m1 = m1Txs.filter(tx => (tx.category || 'Uncategorised') === cat).reduce((s, tx) => s + (tx.debit ?? 0), 0)
+      const m2 = m2Txs.filter(tx => (tx.category || 'Uncategorised') === cat).reduce((s, tx) => s + (tx.debit ?? 0), 0)
+      return { cat, [momMonth1]: m1, [momMonth2]: m2 }
+    }).sort((a, b) => (b[momMonth2] as number) - (a[momMonth2] as number))
+  }, [transactions, momMonth1, momMonth2])
 
   const empty = transactions.length === 0
 
@@ -200,19 +296,11 @@ export default function DashboardPage() {
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Date range</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={customFrom}
-                    onChange={e => setCustomFrom(e.target.value)}
-                    className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
-                  />
+                  <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+                    className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600" />
                   <span className="text-xs text-zinc-400">to</span>
-                  <input
-                    type="date"
-                    value={customTo}
-                    onChange={e => setCustomTo(e.target.value)}
-                    className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
-                  />
+                  <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+                    className="border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600" />
                 </div>
               </div>
             )}
@@ -239,7 +327,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* Summary */}
+            {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
               <div className="bg-white rounded-xl border border-zinc-200 p-5">
                 <p className="text-xs font-medium text-zinc-500 mb-1">Total spent</p>
@@ -257,35 +345,79 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Row 1: Donut + Over time */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* Spending by category */}
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-900 mb-3">Spending by category</h2>
+
+              {/* Donut chart */}
+              <div className="bg-white rounded-xl border border-zinc-200 p-5">
+                <h2 className="text-sm font-semibold text-zinc-900 mb-4">Spending by category</h2>
                 {byCategory.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-zinc-200 px-5 py-10 text-center text-sm text-zinc-400">
-                    No spending for this period.
-                  </div>
+                  <p className="text-sm text-zinc-400 text-center py-10">No spending for this period.</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {byCategory.map(({ cat, amount, pct }) => (
-                      <div key={cat} className="bg-white rounded-xl border border-zinc-200 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-zinc-800 truncate">{cat}</span>
-                          <span className="text-sm font-semibold text-zinc-900 ml-2 shrink-0">{fmt(amount)}</span>
-                        </div>
-                        <div className="w-full bg-zinc-100 rounded-full h-1.5">
-                          <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: '#399605' }} />
-                        </div>
-                        <p className="text-xs text-zinc-400 mt-1.5">{pct.toFixed(1)}% of total spending</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="relative">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={byCategory}
+                            dataKey="amount"
+                            nameKey="cat"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            onClick={(d) => setDrillCategory(d.cat === drillCategory ? null : d.cat)}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            {byCategory.map(({ cat, colour }) => (
+                              <Cell
+                                key={cat}
+                                fill={colour}
+                                opacity={drillCategory && drillCategory !== cat ? 0.35 : 1}
+                                stroke={drillCategory === cat ? '#fff' : 'none'}
+                                strokeWidth={2}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value) => [fmt(Number(value ?? 0)), '']}
+                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Centre label */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-xs text-zinc-400">Total spent</span>
+                        <span className="text-base font-semibold text-zinc-900">{fmt(totalSpent)}</span>
                       </div>
-                    ))}
+                    </div>
+                    {/* Legend */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {byCategory.map(({ cat, amount, pct, colour }) => (
+                        <button
+                          key={cat}
+                          onClick={() => setDrillCategory(cat === drillCategory ? null : cat)}
+                          className={`flex items-center gap-2 text-left rounded-lg px-2 py-1 transition-colors ${drillCategory === cat ? 'bg-zinc-100' : 'hover:bg-zinc-50'}`}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colour }} />
+                          <span className="text-xs text-zinc-700 truncate flex-1">{cat}</span>
+                          <span className="text-xs text-zinc-400 shrink-0">{pct.toFixed(0)}%</span>
+                        </button>
+                      ))}
+                    </div>
+                    {drillCategory && (
+                      <p className="text-xs text-zinc-400 text-center">
+                        Click a category to drill down — or click again to deselect
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Spending / Income over time */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
+              {/* Over time */}
+              <div className="bg-white rounded-xl border border-zinc-200 p-5">
+                <div className="flex items-center gap-2 mb-4">
                   {(['Spending', 'Income', 'All'] as const).map(tab => (
                     <button
                       key={tab}
@@ -304,75 +436,96 @@ export default function DashboardPage() {
 
                 {timeTab === 'All' ? (
                   byPeriodAll.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-zinc-200 px-5 py-10 text-center text-sm text-zinc-400">
-                      No transactions for this period.
-                    </div>
+                    <p className="text-sm text-zinc-400 text-center py-10">No transactions for this period.</p>
                   ) : (
-                    <div className="bg-white rounded-xl border border-zinc-200 p-4">
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart
-                          data={[...byPeriodAll].reverse()}
-                          margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                          <Tooltip
-                            formatter={(value) => [fmt(Number(value ?? 0)), '']}
-                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: 12 }} />
-                          <Bar dataKey="spending" name="Spending" fill="#ef4444" radius={[3, 3, 0, 0]} />
-                          <Bar dataKey="income" name="Income" fill="#399605" radius={[3, 3, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={[...byPeriodAll].reverse()} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar dataKey="spending" name="Spending" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="income" name="Income" fill="#399605" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   )
                 ) : (() => {
                   const rows = timeTab === 'Spending' ? byPeriod : byPeriodIncome
-                  const isSpending = timeTab === 'Spending'
-                  const colour = isSpending ? '#ef4444' : '#399605'
-                  const dataKey = 'amount'
+                  const colour = timeTab === 'Spending' ? '#ef4444' : '#399605'
                   return rows.length === 0 ? (
-                    <div className="bg-white rounded-xl border border-zinc-200 px-5 py-10 text-center text-sm text-zinc-400">
-                      No {timeTab.toLowerCase()} for this period.
-                    </div>
+                    <p className="text-sm text-zinc-400 text-center py-10">No {timeTab.toLowerCase()} for this period.</p>
                   ) : (
-                    <div className="bg-white rounded-xl border border-zinc-200 p-4">
-                      <ResponsiveContainer width="100%" height={260}>
-                        <BarChart
-                          data={[...rows].reverse()}
-                          margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
-                          <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                          <Tooltip
-                            formatter={(value) => [fmt(Number(value ?? 0)), timeTab]}
-                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
-                          />
-                          <Bar dataKey={dataKey} name={timeTab} fill={colour} radius={[3, 3, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={[...rows].reverse()} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), timeTab]} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
+                        <Bar dataKey="amount" name={timeTab} fill={colour} radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   )
                 })()}
               </div>
             </div>
 
+            {/* Row 2: Month-over-month */}
+            <div className="bg-white rounded-xl border border-zinc-200 p-5 mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h2 className="text-sm font-semibold text-zinc-900">Month-over-month spending</h2>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="month"
+                    value={momMonth1}
+                    onChange={e => setMomMonth1(e.target.value)}
+                    className="border border-zinc-300 rounded-lg px-3 py-1.5 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
+                  />
+                  <span className="text-xs text-zinc-400">vs</span>
+                  <input
+                    type="month"
+                    value={momMonth2}
+                    onChange={e => setMomMonth2(e.target.value)}
+                    className="border border-zinc-300 rounded-lg px-3 py-1.5 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600"
+                  />
+                </div>
+              </div>
+              {momData.length === 0 ? (
+                <p className="text-sm text-zinc-400 text-center py-10">No spending data for these months.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={momData} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="cat" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
+                    <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#40916c" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey={momMonth2} name={formatYearMonth(momMonth2)} fill="#2d6a4f" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Row 3: Largest transactions + Popular merchants (collapsible) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
               {/* Largest transactions */}
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-900 mb-3">Largest transactions</h2>
-                {largestTransactions.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-zinc-200 px-5 py-10 text-center text-sm text-zinc-400">
-                    No spending for this period.
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-                    <table className="w-full text-sm">
+              <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                <button
+                  onClick={() => setLargestExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-zinc-50 transition-colors"
+                >
+                  <h2 className="text-sm font-semibold text-zinc-900">Largest transactions</h2>
+                  <span className="text-zinc-400 text-sm">{largestExpanded ? '▲' : '▼'}</span>
+                </button>
+                {largestExpanded && (
+                  largestTransactions.length === 0 ? (
+                    <p className="px-5 pb-5 text-sm text-zinc-400">No spending for this period.</p>
+                  ) : (
+                    <table className="w-full text-sm border-t border-zinc-100">
                       <thead>
-                        <tr className="border-b border-zinc-200 bg-zinc-50">
+                        <tr className="bg-zinc-50">
                           <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 w-10">#</th>
                           <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Merchant</th>
                           <th className="text-right px-4 py-3 text-xs font-medium text-zinc-500">Total spent</th>
@@ -380,7 +533,7 @@ export default function DashboardPage() {
                       </thead>
                       <tbody>
                         {largestTransactions.map(([merchant, amount], i) => (
-                          <tr key={merchant} className="border-b border-zinc-100 last:border-0">
+                          <tr key={merchant} className="border-t border-zinc-100">
                             <td className="px-4 py-3 text-zinc-400 tabular-nums">{i + 1}</td>
                             <td className="px-4 py-3 text-zinc-900">{merchant}</td>
                             <td className="px-4 py-3 text-right font-medium text-red-600 tabular-nums">{fmt(amount)}</td>
@@ -388,22 +541,26 @@ export default function DashboardPage() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  )
                 )}
               </div>
 
               {/* Popular merchants */}
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-900 mb-3">Popular merchants</h2>
-                {popularMerchants.length === 0 ? (
-                  <div className="bg-white rounded-xl border border-zinc-200 px-5 py-10 text-center text-sm text-zinc-400">
-                    No spending for this period.
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
-                    <table className="w-full text-sm">
+              <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                <button
+                  onClick={() => setPopularExpanded(v => !v)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-zinc-50 transition-colors"
+                >
+                  <h2 className="text-sm font-semibold text-zinc-900">Popular merchants</h2>
+                  <span className="text-zinc-400 text-sm">{popularExpanded ? '▲' : '▼'}</span>
+                </button>
+                {popularExpanded && (
+                  popularMerchants.length === 0 ? (
+                    <p className="px-5 pb-5 text-sm text-zinc-400">No spending for this period.</p>
+                  ) : (
+                    <table className="w-full text-sm border-t border-zinc-100">
                       <thead>
-                        <tr className="border-b border-zinc-200 bg-zinc-50">
+                        <tr className="bg-zinc-50">
                           <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500 w-10">#</th>
                           <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Merchant</th>
                           <th className="text-right px-4 py-3 text-xs font-medium text-zinc-500">Times</th>
@@ -412,7 +569,7 @@ export default function DashboardPage() {
                       </thead>
                       <tbody>
                         {popularMerchants.map(({ narration, count, total }, i) => (
-                          <tr key={narration} className="border-b border-zinc-100 last:border-0">
+                          <tr key={narration} className="border-t border-zinc-100">
                             <td className="px-4 py-3 text-zinc-400 tabular-nums">{i + 1}</td>
                             <td className="px-4 py-3 text-zinc-900">{narration}</td>
                             <td className="px-4 py-3 text-right text-zinc-500 tabular-nums">{count}</td>
@@ -421,13 +578,57 @@ export default function DashboardPage() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  )
                 )}
               </div>
             </div>
           </>
         )}
       </div>
+
+      {/* Category drilldown slide-out panel */}
+      {drillCategory && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 z-30"
+            onClick={() => setDrillCategory(null)}
+          />
+          <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-40 flex flex-col">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200">
+              <div className="flex items-center gap-3">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ background: categoryColourMap.get(drillCategory) ?? '#2d6a4f' }}
+                />
+                <h2 className="text-base font-semibold text-zinc-900">{drillCategory}</h2>
+              </div>
+              <button
+                onClick={() => setDrillCategory(null)}
+                className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50">
+              <p className="text-xs text-zinc-500">{drillTxs.length} transaction{drillTxs.length !== 1 ? 's' : ''}</p>
+              <p className="text-xl font-semibold text-zinc-900">
+                {fmt(drillTxs.reduce((s, tx) => s + (tx.debit ?? 0), 0))}
+              </p>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {drillTxs.map(tx => (
+                <div key={tx.id} className="flex items-center justify-between px-6 py-3 border-b border-zinc-100 last:border-0 hover:bg-zinc-50">
+                  <div className="min-w-0 flex-1 pr-4">
+                    <p className="text-sm text-zinc-900 truncate">{tx.narration}</p>
+                    <p className="text-xs text-zinc-400">{tx.date}</p>
+                  </div>
+                  <p className="text-sm font-medium text-red-600 tabular-nums shrink-0">{fmt(tx.debit ?? 0)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </main>
   )
 }
