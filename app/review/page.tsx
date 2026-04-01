@@ -311,6 +311,7 @@ export default function ReviewPage() {
           current={reclassifyQueue.length > 1 ? reclassifyQueue.length : undefined}
           onSaveRule={(mt, cs, pat) => handleSaveRule(mt, cs, pat)}
           onSkipRule={handleSkipRule}
+          onCancel={() => setReclassifyQueue([])}
         />
       )}
 

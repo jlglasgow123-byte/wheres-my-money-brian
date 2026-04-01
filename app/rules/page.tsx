@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRulesStore } from '@/lib/store/rules'
 import { useHistoryStore } from '@/lib/store/history'
 import { useUserCategoryStore } from '@/lib/store/userCategories'
@@ -8,6 +8,72 @@ import { matchesRule } from '@/lib/categoriser/match'
 import { useAllCategories, useGetSubcategories } from '@/lib/categories/useAllCategories'
 import type { MappingRule, MatchType } from '@/lib/categoriser/types'
 import Spinner from '@/components/Spinner'
+
+function SubcategoryField({
+  category,
+  value,
+  onChange,
+  subcategories,
+}: {
+  category: string
+  value: string
+  onChange: (v: string) => void
+  subcategories: string[]
+}) {
+  const { addUserSubcategory } = useUserCategoryStore()
+  const [adding, setAdding] = useState(false)
+  const [newSubcat, setNewSubcat] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleAdd() {
+    const s = newSubcat.trim()
+    if (!s || !category) return
+    await addUserSubcategory(category, s)
+    onChange(s)
+    setNewSubcat('')
+    setAdding(false)
+  }
+
+  return (
+    <div className="flex flex-col gap-1 w-44">
+      <label className="text-xs text-zinc-500 font-medium">Subcategory</label>
+      <div className="flex gap-1">
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          disabled={!category}
+          className="flex-1 border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <option value="">No subcategory</option>
+          {subcategories.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        {category && (
+          <button
+            onClick={() => { setAdding(v => !v); setTimeout(() => inputRef.current?.focus(), 50) }}
+            title="Add subcategory"
+            className="border border-zinc-300 rounded-lg px-2.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-colors text-base leading-none"
+          >
+            +
+          </button>
+        )}
+      </div>
+      {adding && (
+        <div className="flex gap-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={newSubcat}
+            onChange={e => setNewSubcat(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setNewSubcat('') } }}
+            placeholder="New subcategory"
+            className="flex-1 border border-zinc-300 rounded-lg px-2.5 py-1.5 text-sm font-sans text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button onClick={handleAdd} className="border border-zinc-300 rounded-lg px-2.5 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors">Add</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const MATCH_TYPE_LABELS: Record<MatchType, string> = {
   contains: 'Contains',
@@ -295,20 +361,12 @@ export default function RulesPage() {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-1 w-44">
-                <label className="text-xs text-zinc-500 font-medium">Subcategory</label>
-                <select
-                  value={newRule.subcategory}
-                  onChange={e => setNewRule(p => ({ ...p, subcategory: e.target.value }))}
-                  disabled={newSubcategories.length === 0}
-                  className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <option value="">No subcategory</option>
-                  {newSubcategories.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
+              <SubcategoryField
+                category={newRule.category}
+                value={newRule.subcategory}
+                onChange={v => setNewRule(p => ({ ...p, subcategory: v }))}
+                subcategories={newSubcategories}
+              />
               <div className="flex gap-2 items-end">
                 <button
                   onClick={handleNewSave}
@@ -515,20 +573,12 @@ export default function RulesPage() {
                           ))}
                         </select>
                       </div>
-                      <div className="flex flex-col gap-1 w-44">
-                        <label className="text-xs text-zinc-500 font-medium">Subcategory</label>
-                        <select
-                          value={editing.subcategory ?? ''}
-                          onChange={e => handleEditChange('subcategory', e.target.value || null)}
-                          disabled={editSubcategories.length === 0}
-                          className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <option value="">No subcategory</option>
-                          {editSubcategories.map(s => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <SubcategoryField
+                        category={editing.category}
+                        value={editing.subcategory ?? ''}
+                        onChange={v => handleEditChange('subcategory', v || null)}
+                        subcategories={editSubcategories}
+                      />
                       <div className="flex gap-2 items-end">
                         <button
                           onClick={handleEditSave}

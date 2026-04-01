@@ -8,7 +8,7 @@ import { useAuthStore } from '@/lib/store/auth'
 import Spinner from '@/components/Spinner'
 
 const CATEGORY_COLOURS = [
-  '#a3c14a', '#5a6c37', '#fff163', '#d103d1', '#633058',
+  '#a3c14a', '#5a6c37', '#ffc888', '#d103d1', '#633058',
   '#fb92ff', '#7a9e3b', '#3d4f22', '#e8d44d', '#a002a0',
   '#8b4a78', '#fdb8fe',
 ]
@@ -24,6 +24,17 @@ function getCurrentMonthBounds() {
   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
   const label = now.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
   return { from, to, label }
+}
+
+function DonutTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { cat: string; amount: number } }> }) {
+  if (!active || !payload?.length) return null
+  const { cat, amount } = payload[0].payload
+  return (
+    <div className="bg-white border border-zinc-200 rounded-lg shadow-md px-3 py-2 text-xs pointer-events-none">
+      <p className="font-semibold text-black mb-0.5">{cat}</p>
+      <p className="text-black">{fmt(amount)}</p>
+    </div>
+  )
 }
 
 function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }) {
@@ -104,8 +115,8 @@ export default function HomePage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value) => [fmt(Number(value ?? 0)), '']}
-                      contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid #e4e4e7' }}
+                      content={<DonutTooltip />}
+                      wrapperStyle={{ zIndex: 50 }}
                     />
                     {byCategory.length > 0 && (
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">

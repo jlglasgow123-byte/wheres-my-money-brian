@@ -15,7 +15,7 @@ type GroupBy = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year'
 const CATEGORY_COLOURS = [
   '#a3c14a',
   '#5a6c37',
-  '#fff163',
+  '#ffc888',
   '#d103d1',
   '#633058',
   '#fb92ff',
@@ -118,8 +118,8 @@ function DonutTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   const { cat, amount } = payload[0].payload
   return (
     <div className="bg-white border border-zinc-200 rounded-lg shadow-md px-3 py-2 text-xs pointer-events-none">
-      <p className="font-semibold text-zinc-900 mb-0.5">{cat}</p>
-      <p className="text-zinc-600">{fmt(amount)}</p>
+      <p className="font-semibold text-black mb-0.5">{cat}</p>
+      <p className="text-black">{fmt(amount)}</p>
     </div>
   )
 }

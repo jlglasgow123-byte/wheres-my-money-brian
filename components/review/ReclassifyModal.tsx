@@ -8,6 +8,7 @@ interface Props {
   current?: number
   onSaveRule: (matchType: MatchType, caseSensitive: boolean, pattern: string) => void
   onSkipRule: () => void
+  onCancel: () => void
 }
 
 const MATCH_LABELS: Record<MatchType, string> = {
@@ -16,7 +17,7 @@ const MATCH_LABELS: Record<MatchType, string> = {
   ends_with: 'Ends with',
 }
 
-export default function ReclassifyModal({ narration, toCategory, toSubcategory, current, onSaveRule, onSkipRule }: Props) {
+export default function ReclassifyModal({ narration, toCategory, toSubcategory, current, onSaveRule, onSkipRule, onCancel }: Props) {
   const [matchType, setMatchType] = useState<MatchType>('contains')
   const [caseSensitive, setCaseSensitive] = useState(false)
   const [pattern, setPattern] = useState(narration)
@@ -26,9 +27,18 @@ export default function ReclassifyModal({ narration, toCategory, toSubcategory, 
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-base font-semibold text-zinc-900">Save this mapping?</h2>
-          {current !== undefined && (
-            <span className="text-xs text-zinc-400">{current} remaining</span>
-          )}
+          <div className="flex items-center gap-3">
+            {current !== undefined && (
+              <span className="text-xs text-zinc-400">{current} remaining</span>
+            )}
+            <button
+              onClick={onCancel}
+              className="text-zinc-400 hover:text-zinc-700 text-lg leading-none transition-colors"
+              aria-label="Cancel"
+            >
+              ×
+            </button>
+          </div>
         </div>
         <p className="text-sm text-zinc-500 mb-4">
           Would you like to permanently save this as a rule so future uploads are categorised the same way?

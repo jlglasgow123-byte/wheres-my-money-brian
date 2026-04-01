@@ -15,7 +15,7 @@ export default function DataLoader() {
   const { user, loading: authLoading } = useAuthStore()
   const { loadTransactions, loaded: historyLoaded } = useHistoryStore()
   const { loadRules, loaded: rulesLoaded } = useRulesStore()
-  const { loadUserCategories, loaded: categoriesLoaded } = useUserCategoryStore()
+  const { loadUserCategories, loadUserSubcategories, loaded: categoriesLoaded } = useUserCategoryStore()
 
   useEffect(() => {
     initAuth()
@@ -32,6 +32,7 @@ export default function DataLoader() {
     if (!historyLoaded) loadTransactions()
     if (!rulesLoaded) loadRules()
     if (!categoriesLoaded) loadUserCategories()
+    loadUserSubcategories()
   }, [user, authLoading, pathname])
 
   return null
