@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useHistoryStore } from '@/lib/store/history'
 import { useRulesStore } from '@/lib/store/rules'
-import { DEFAULT_CATEGORIES, getSubcategories } from '@/lib/categories/defaults'
+import { useAllCategories, useGetSubcategories } from '@/lib/categories/useAllCategories'
 import type { MatchType, MappingRule } from '@/lib/categoriser/types'
 import { matchesRule } from '@/lib/categoriser/match'
 import Spinner from '@/components/Spinner'
@@ -21,7 +21,7 @@ function fmt(n: number) {
   return n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })
 }
 
-const ALL_CATEGORY_NAMES = DEFAULT_CATEGORIES.map(c => c.name)
+// ALL_CATEGORY_NAMES is now derived inside the component via useAllCategories()
 
 function escapeCell(value: string | number | null | undefined): string {
   const s = value == null ? '' : String(value)
@@ -51,6 +51,9 @@ function buildCsv(rows: import('@/lib/normaliser/types').Transaction[]): string 
 export default function TransactionsPage() {
   const { transactions, deleteTransaction, updateTransaction, bulkUpdateCategory, loaded: historyLoaded } = useHistoryStore()
   const { rules, addRule, deleteRule } = useRulesStore()
+  const allCategories = useAllCategories()
+  const getSubcategories = useGetSubcategories()
+  const ALL_CATEGORY_NAMES = allCategories.map(c => c.name)
 
   // Display filters
   const [typeFilter, setTypeFilter] = useState('Income and Spending')

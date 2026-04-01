@@ -12,21 +12,22 @@ import type { Transaction } from '@/lib/normaliser/types'
 type Period = 'This month' | 'Last month' | 'Last 3 months' | 'All time' | 'Custom'
 type GroupBy = 'Day' | 'Week' | 'Month' | 'Quarter' | 'Year'
 
-// Foresty colour palette — 12 distinct colours
 const CATEGORY_COLOURS = [
-  '#2d6a4f', // deep forest green
-  '#52b788', // mid green
-  '#95d5b2', // light sage
-  '#1b4332', // very dark green
-  '#74c69d', // soft mint
-  '#40916c', // medium green
-  '#b7e4c7', // pale green
-  '#4a7c59', // muted forest
-  '#081c15', // near black green
-  '#d8f3dc', // very light green
-  '#6a994e', // yellow-green
-  '#386641', // dark olive
+  '#a3c14a',
+  '#5a6c37',
+  '#fff163',
+  '#d103d1',
+  '#633058',
+  '#fb92ff',
+  '#7a9e3b',
+  '#3d4f22',
+  '#e8d44d',
+  '#a002a0',
+  '#8b4a78',
+  '#fdb8fe',
 ]
+
+const UNCATEGORISED_COLOUR = '#a9acb6'
 
 function getPeriodBounds(period: Period): { from: string; to: string } | null {
   const now = new Date()
@@ -171,7 +172,7 @@ export default function DashboardPage() {
         cat,
         amount,
         pct: totalSpent > 0 ? (amount / totalSpent) * 100 : 0,
-        colour: CATEGORY_COLOURS[i % CATEGORY_COLOURS.length],
+        colour: cat === 'Uncategorised' ? UNCATEGORISED_COLOUR : CATEGORY_COLOURS[i % CATEGORY_COLOURS.length],
       }))
   }, [spendingTxs, totalSpent])
 
@@ -442,7 +443,7 @@ export default function DashboardPage() {
                       <BarChart data={[...byPeriodAll].reverse()} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} />
                         <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
                         <Legend wrapperStyle={{ fontSize: 12 }} />
                         <Bar dataKey="spending" name="Spending" fill="#ef4444" radius={[3, 3, 0, 0]} />
@@ -460,7 +461,7 @@ export default function DashboardPage() {
                       <BarChart data={[...rows].reverse()} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} />
                         <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), timeTab]} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
                         <Bar dataKey="amount" name={timeTab} fill={colour} radius={[3, 3, 0, 0]} />
                       </BarChart>
@@ -497,7 +498,7 @@ export default function DashboardPage() {
                   <BarChart data={momData} margin={{ top: 4, right: 8, left: 0, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="cat" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
-                    <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                    <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} />
                     <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#40916c" radius={[3, 3, 0, 0]} />

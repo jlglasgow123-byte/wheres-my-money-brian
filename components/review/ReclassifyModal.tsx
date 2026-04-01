@@ -6,7 +6,7 @@ interface Props {
   toCategory: string
   toSubcategory: string | null
   current?: number
-  onSaveRule: (matchType: MatchType, caseSensitive: boolean) => void
+  onSaveRule: (matchType: MatchType, caseSensitive: boolean, pattern: string) => void
   onSkipRule: () => void
 }
 
@@ -19,6 +19,7 @@ const MATCH_LABELS: Record<MatchType, string> = {
 export default function ReclassifyModal({ narration, toCategory, toSubcategory, current, onSaveRule, onSkipRule }: Props) {
   const [matchType, setMatchType] = useState<MatchType>('contains')
   const [caseSensitive, setCaseSensitive] = useState(false)
+  const [pattern, setPattern] = useState(narration)
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
@@ -34,7 +35,13 @@ export default function ReclassifyModal({ narration, toCategory, toSubcategory, 
         </p>
 
         <div className="bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 mb-4 text-sm">
-          <p className="font-mono text-zinc-600 text-xs mb-1 truncate">{narration}</p>
+          <p className="text-xs text-zinc-500 mb-1">Pattern (edit to broaden or narrow the match)</p>
+          <input
+            type="text"
+            value={pattern}
+            onChange={e => setPattern(e.target.value)}
+            className="w-full border border-zinc-300 rounded-md px-3 py-1.5 text-sm font-mono text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+          />
           <p className="text-zinc-900 font-medium">
             {toCategory}
             {toSubcategory && <span className="text-zinc-500 font-normal"> / {toSubcategory}</span>}
@@ -69,7 +76,7 @@ export default function ReclassifyModal({ narration, toCategory, toSubcategory, 
 
         <div className="flex gap-3">
           <button
-            onClick={() => onSaveRule(matchType, caseSensitive)}
+            onClick={() => onSaveRule(matchType, caseSensitive, pattern.trim() || narration.trim())}
             className="flex-1 bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Yes, save as rule

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useHistoryStore } from '@/lib/store/history'
 import { useRulesStore } from '@/lib/store/rules'
+import { useUserCategoryStore } from '@/lib/store/userCategories'
 import { useAuthStore, initAuth } from '@/lib/store/auth'
 
 const AUTH_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/forgot-password', '/auth/update-password', '/help', '/privacy', '/home-test']
@@ -14,6 +15,7 @@ export default function DataLoader() {
   const { user, loading: authLoading } = useAuthStore()
   const { loadTransactions, loaded: historyLoaded } = useHistoryStore()
   const { loadRules, loaded: rulesLoaded } = useRulesStore()
+  const { loadUserCategories, loaded: categoriesLoaded } = useUserCategoryStore()
 
   useEffect(() => {
     initAuth()
@@ -29,6 +31,7 @@ export default function DataLoader() {
     }
     if (!historyLoaded) loadTransactions()
     if (!rulesLoaded) loadRules()
+    if (!categoriesLoaded) loadUserCategories()
   }, [user, authLoading, pathname])
 
   return null

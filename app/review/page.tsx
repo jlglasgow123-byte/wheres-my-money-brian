@@ -94,12 +94,12 @@ export default function ReviewPage() {
     checkUncatAndProceed()
   }
 
-  function handleSaveRule(matchType: import('@/lib/categoriser/types').MatchType, caseSensitive: boolean) {
+  function handleSaveRule(matchType: import('@/lib/categoriser/types').MatchType, caseSensitive: boolean, pattern: string) {
     const current = reclassifyQueue[0]
     if (!current) return
     addRule({
       id: crypto.randomUUID(),
-      pattern: current.narration.trim(),
+      pattern,
       matchType,
       caseSensitive,
       category: current.toCategory,
@@ -309,7 +309,7 @@ export default function ReviewPage() {
           toCategory={reclassifyQueue[0].toCategory}
           toSubcategory={reclassifyQueue[0].toSubcategory}
           current={reclassifyQueue.length > 1 ? reclassifyQueue.length : undefined}
-          onSaveRule={(mt, cs) => handleSaveRule(mt, cs)}
+          onSaveRule={(mt, cs, pat) => handleSaveRule(mt, cs, pat)}
           onSkipRule={handleSkipRule}
         />
       )}

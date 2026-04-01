@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRulesStore } from '@/lib/store/rules'
 import { useHistoryStore } from '@/lib/store/history'
+import { useUserCategoryStore } from '@/lib/store/userCategories'
 import { matchesRule } from '@/lib/categoriser/match'
-import { DEFAULT_CATEGORIES, getSubcategories } from '@/lib/categories/defaults'
+import { useAllCategories, useGetSubcategories } from '@/lib/categories/useAllCategories'
 import type { MappingRule, MatchType } from '@/lib/categoriser/types'
 import Spinner from '@/components/Spinner'
 
@@ -30,6 +31,12 @@ type NewRuleState = {
   caseSensitive: boolean
   category: string
   subcategory: string
+}
+
+type CreateCategoryState = {
+  name: string
+  subcatInput: string
+  subcategories: string[]
 }
 
 function MatchBadge({ matchType, caseSensitive }: { matchType?: MatchType; caseSensitive?: boolean }) {
@@ -90,6 +97,10 @@ type RetroPrompt = {
 export default function RulesPage() {
   const { rules, addRule, updateRule, deleteRule, loaded: rulesLoaded } = useRulesStore()
   const { transactions, bulkUpdateCategory } = useHistoryStore()
+  const { userCategories, addUserCategory, deleteUserCategory } = useUserCategoryStore()
+  const allCategories = useAllCategories()
+  const getSubcategories = useGetSubcategories()
+
   const [editing, setEditing] = useState<EditingState | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [newRule, setNewRule] = useState<NewRuleState>({
@@ -102,6 +113,16 @@ export default function RulesPage() {
   const [newRuleError, setNewRuleError] = useState('')
   const [retroPrompt, setRetroPrompt] = useState<RetroPrompt | null>(null)
   const [retroApplying, setRetroApplying] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
+
+  // Create category
+  const [showCreateWarning, setShowCreateWarning] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createCategory, setCreateCategory] = useState<CreateCategoryState>({
+    name: '', subcatInput: '', subcategories: [],
+  })
+  const [createCategoryError, setCreateCategoryError] = useState('')
 
   if (!rulesLoaded) return <Spinner />
 
@@ -187,6 +208,33 @@ export default function RulesPage() {
 
   const newSubcategories = getSubcategories(newRule.category)
 
+  function handleCreateCategoryConfirm() {
+    const name = createCategory.name.trim()
+    if (!name) { setCreateCategoryError('Category name is required.'); return }
+    if (allCategories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      setCreateCategoryError('A category with this name already exists.')
+      return
+    }
+    addUserCategory(name, createCategory.subcategories)
+    setCreateCategory({ name: '', subcatInput: '', subcategories: [] })
+    setCreateCategoryError('')
+    setShowCreateForm(false)
+  }
+
+  function handleAddSubcat() {
+    const s = createCategory.subcatInput.trim()
+    if (!s || createCategory.subcategories.includes(s)) return
+    setCreateCategory(p => ({ ...p, subcategories: [...p.subcategories, s], subcatInput: '' }))
+  }
+
+  const filteredRules = rules.filter(rule => {
+    if (filterCategory && rule.category !== filterCategory) return false
+    if (searchText) {
+      return rule.pattern.toLowerCase().includes(searchText.toLowerCase())
+    }
+    return true
+  })
+
   return (
     <main className="min-h-screen bg-zinc-50 px-6 py-10">
       <div className="max-w-4xl mx-auto">
@@ -197,12 +245,20 @@ export default function RulesPage() {
               Rules tell Brian how to categorise your transactions automatically.
             </p>
           </div>
-          <button
-            onClick={() => { setShowNewForm(true); setNewRuleError('') }}
-            className="bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Add rule
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowCreateWarning(true)}
+              className="border border-zinc-300 text-zinc-700 text-sm font-medium py-2 px-4 rounded-lg hover:bg-zinc-50 transition-colors"
+            >
+              Create category
+            </button>
+            <button
+              onClick={() => { setShowNewForm(true); setNewRuleError('') }}
+              className="bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add rule
+            </button>
+          </div>
         </div>
 
         {/* New rule form */}
@@ -234,7 +290,7 @@ export default function RulesPage() {
                   className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select category</option>
-                  {DEFAULT_CATEGORIES.map(c => (
+                  {allCategories.map(c => (
                     <option key={c.name} value={c.name}>{c.name}</option>
                   ))}
                 </select>
@@ -274,6 +330,131 @@ export default function RulesPage() {
           </div>
         )}
 
+        {/* Create category form */}
+        {showCreateForm && (
+          <div className="bg-white border border-zinc-200 rounded-xl p-5 mb-6">
+            <h2 className="text-sm font-semibold text-zinc-900 mb-1">New category</h2>
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
+              Only create a custom category when none of the existing categories are sufficient.
+            </p>
+            <div className="flex flex-wrap gap-3 items-end mb-3">
+              <div className="flex flex-col gap-1 flex-1 min-w-48">
+                <label className="text-xs text-zinc-500 font-medium">Category name</label>
+                <input
+                  type="text"
+                  value={createCategory.name}
+                  onChange={e => setCreateCategory(p => ({ ...p, name: e.target.value }))}
+                  placeholder="e.g. Side Business"
+                  className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1 flex-1 min-w-48">
+                <label className="text-xs text-zinc-500 font-medium">Add subcategory (optional)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={createCategory.subcatInput}
+                    onChange={e => setCreateCategory(p => ({ ...p, subcatInput: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && handleAddSubcat()}
+                    placeholder="e.g. Invoices"
+                    className="flex-1 border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleAddSubcat}
+                    className="border border-zinc-300 text-zinc-600 text-sm font-medium py-2 px-3 rounded-lg hover:bg-zinc-50 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+            {createCategory.subcategories.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {createCategory.subcategories.map(s => (
+                  <span key={s} className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-700 text-xs font-medium px-2.5 py-1 rounded-full">
+                    {s}
+                    <button
+                      onClick={() => setCreateCategory(p => ({ ...p, subcategories: p.subcategories.filter(x => x !== s) }))}
+                      className="text-zinc-400 hover:text-zinc-700 leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateCategoryConfirm}
+                className="bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Save category
+              </button>
+              <button
+                onClick={() => { setShowCreateForm(false); setCreateCategoryError('') }}
+                className="border border-zinc-300 text-zinc-600 text-sm font-medium py-2 px-4 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            {createCategoryError && <p className="mt-3 text-sm text-red-600">{createCategoryError}</p>}
+          </div>
+        )}
+
+        {/* User categories list */}
+        {userCategories.length > 0 && (
+          <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden mb-6">
+            <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-500">Custom categories</span>
+            </div>
+            {userCategories.map(cat => (
+              <div key={cat.name} className="flex items-center justify-between px-5 py-3 border-b border-zinc-100 last:border-0">
+                <div>
+                  <span className="text-sm font-medium text-zinc-800">{cat.name}</span>
+                  {cat.subcategories.length > 0 && (
+                    <span className="ml-2 text-xs text-zinc-400">{cat.subcategories.join(', ')}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => deleteUserCategory(cat.name)}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search and filter */}
+        <div className="flex flex-wrap gap-3 mb-4">
+          <input
+            type="text"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            placeholder="Search by pattern..."
+            className="flex-1 min-w-48 border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <select
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+            className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All categories</option>
+            {allCategories.map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+          {(searchText || filterCategory) && (
+            <button
+              onClick={() => { setSearchText(''); setFilterCategory('') }}
+              className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors px-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {/* Rules table */}
         <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
           <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-500">
@@ -289,7 +470,13 @@ export default function RulesPage() {
             </p>
           )}
 
-          {rules.map(rule => {
+          {rules.length > 0 && filteredRules.length === 0 && (
+            <p className="px-5 py-10 text-sm text-zinc-400 text-center">
+              No rules match your search.
+            </p>
+          )}
+
+          {filteredRules.map(rule => {
             const isEditing = editing?.id === rule.id
             const editSubcategories = isEditing ? getSubcategories(editing.category) : []
 
@@ -323,7 +510,7 @@ export default function RulesPage() {
                           onChange={e => handleEditChange('category', e.target.value)}
                           className="border border-zinc-300 rounded-lg px-3 py-2 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          {DEFAULT_CATEGORIES.map(c => (
+                          {allCategories.map(c => (
                             <option key={c.name} value={c.name}>{c.name}</option>
                           ))}
                         </select>
@@ -387,6 +574,35 @@ export default function RulesPage() {
           })}
         </div>
       </div>
+      {/* Create category warning */}
+      {showCreateWarning && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-base font-semibold text-zinc-900 mb-2">Before you create a category</h2>
+            <p className="text-sm text-zinc-600 mb-4">
+              Brian already includes categories for most common spending. Only create a custom category if none of the existing ones are a reasonable fit.
+            </p>
+            <div className="bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3 mb-5 text-xs text-zinc-500 leading-relaxed">
+              Existing: {['Housing', 'Groceries', 'Dining & Takeaway', 'Automotive', 'Health', 'Shopping', 'Entertainment', 'Personal Care', 'Education', 'Financial', 'Travel', 'Giving', 'Pets', 'Savings', 'Income'].join(' · ')}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowCreateWarning(false); setShowCreateForm(true) }}
+                className="flex-1 bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => setShowCreateWarning(false)}
+                className="flex-1 border border-zinc-300 text-zinc-600 text-sm font-medium py-2 px-4 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Retroactive re-categorisation prompt */}
       {retroPrompt && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">

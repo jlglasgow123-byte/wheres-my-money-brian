@@ -7,9 +7,10 @@ import { useAuthStore } from '@/lib/store/auth'
 import { signOut } from '@/lib/supabase/auth'
 
 const links = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/history', label: 'Transactions' },
+  { href: '/home', label: 'Home' },
   { href: '/', label: 'Upload' },
+  { href: '/history', label: 'Transactions' },
+  { href: '/dashboard', label: 'Dashboard' },
   { href: '/rules', label: 'Rules' },
   { href: '/help', label: 'Help' },
 ]
@@ -36,19 +37,24 @@ export default function Nav() {
           <span className="text-sm font-semibold text-zinc-900">Brian</span>
         </Link>
         <div className="flex items-center gap-1 flex-1">
-          {links.map(link => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                pathname === link.href
-                  ? 'bg-zinc-100 text-zinc-900'
-                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map(link => {
+            const isActive = link.href === '/'
+              ? pathname === '/'
+              : pathname.startsWith(link.href)
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[#399605]/10 text-[#399605] font-semibold'
+                    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+                }`}
+              >
+                {link.label}
+              </Link>
+            )
+          })}
         </div>
         {user && (
           <div className="flex items-center gap-4 shrink-0">
