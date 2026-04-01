@@ -40,6 +40,9 @@ yarn-error.log*
 desktop.ini
 Thumbs.db
 
+# local chat logs
+*.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
