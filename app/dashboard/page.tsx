@@ -112,13 +112,15 @@ function formatYearMonth(ym: string) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' })
 }
 
-// Custom donut label
-function DonutLabel({ cx, cy, total }: { cx: number; cy: number; total: number }) {
+
+function DonutTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { cat: string; amount: number } }> }) {
+  if (!active || !payload?.length) return null
+  const { cat, amount } = payload[0].payload
   return (
-    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-      <tspan x={cx} dy="-0.4em" fontSize="13" fill="#71717a">Total spent</tspan>
-      <tspan x={cx} dy="1.6em" fontSize="16" fontWeight="600" fill="#18181b">{fmt(total)}</tspan>
-    </text>
+    <div className="bg-white border border-zinc-200 rounded-lg shadow-md px-3 py-2 text-xs pointer-events-none">
+      <p className="font-semibold text-zinc-900 mb-0.5">{cat}</p>
+      <p className="text-zinc-600">{fmt(amount)}</p>
+    </div>
   )
 }
 
@@ -356,43 +358,38 @@ export default function DashboardPage() {
                   <p className="text-sm text-zinc-400 text-center py-10">No spending for this period.</p>
                 ) : (
                   <div className="flex flex-col gap-4">
-                    <div className="relative">
-                      <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                          <Pie
-                            data={byCategory}
-                            dataKey="amount"
-                            nameKey="cat"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70}
-                            outerRadius={100}
-                            paddingAngle={2}
-                            onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setDrillCategory(cat === drillCategory ? null : cat) }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            {byCategory.map(({ cat, colour }) => (
-                              <Cell
-                                key={cat}
-                                fill={colour}
-                                opacity={drillCategory && drillCategory !== cat ? 0.35 : 1}
-                                stroke={drillCategory === cat ? '#fff' : 'none'}
-                                strokeWidth={2}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            formatter={(value) => [fmt(Number(value ?? 0)), '']}
-                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      {/* Centre label */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-xs text-zinc-400">Total spent</span>
-                        <span className="text-base font-semibold text-zinc-900">{fmt(totalSpent)}</span>
-                      </div>
-                    </div>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <PieChart>
+                        <Pie
+                          data={byCategory}
+                          dataKey="amount"
+                          nameKey="cat"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={72}
+                          outerRadius={105}
+                          paddingAngle={2}
+                          onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setDrillCategory(cat === drillCategory ? null : cat) }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {byCategory.map(({ cat, colour }) => (
+                            <Cell
+                              key={cat}
+                              fill={colour}
+                              opacity={drillCategory && drillCategory !== cat ? 0.35 : 1}
+                              stroke={drillCategory === cat ? '#fff' : 'none'}
+                              strokeWidth={2}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          content={<DonutTooltip />}
+                          wrapperStyle={{ zIndex: 50 }}
+                        />
+                        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize={12} fill="#71717a">Total spent</text>
+                        <text x="50%" y="56%" textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={700} fill="#18181b">{fmt(totalSpent)}</text>
+                      </PieChart>
+                    </ResponsiveContainer>
                     {/* Legend */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                       {byCategory.map(({ cat, amount, pct, colour }) => (
@@ -500,9 +497,9 @@ export default function DashboardPage() {
                     <XAxis dataKey="cat" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
                     <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} />
                     <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#40916c" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey={momMonth2} name={formatYearMonth(momMonth2)} fill="#2d6a4f" radius={[3, 3, 0, 0]} />
+                    <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12, paddingBottom: 12 }} />
+                    <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#7B9E3B" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey={momMonth2} name={formatYearMonth(momMonth2)} fill="#ffc888" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
