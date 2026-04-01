@@ -111,33 +111,34 @@ export default function HomeTestPage() {
         </div>
       </div>
 
-      {/* Trust signals */}
-      <div className="px-6 py-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl font-bold text-zinc-900 text-center mb-10">Your bank doesn&rsquo;t need to be involved</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🔒</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">No bank login required</h3>
-              <p className="text-sm text-zinc-500">
-                You never connect your account. Just upload a CSV.
-              </p>
+      {/* Trust strip */}
+      <div className="px-6 py-16 border-t border-zinc-100">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-xl font-bold text-zinc-900 mb-6">
+            Your bank doesn&rsquo;t need to be involved
+          </h2>
+          <p className="text-zinc-500 mb-10 max-w-xl mx-auto">
+            No logins. No account connections. Just your data, uploaded manually — exactly how it should be.
+          </p>
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 text-sm text-zinc-600">
+            <div className="flex items-center gap-2">
+              <span>🔒</span>
+              <span>No bank login</span>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🇦🇺</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">Built for Australian banks</h3>
-              <p className="text-sm text-zinc-500">
-                Works with CommBank, ANZ, NAB, and Bankwest formats.
-              </p>
+            <div className="hidden sm:block text-zinc-300">•</div>
+            <div className="flex items-center gap-2">
+              <span>🇦🇺</span>
+              <span>Works with Australian banks</span>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🚫</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">Your data isn&rsquo;t touched</h3>
-              <p className="text-sm text-zinc-500">
-                Nothing is sold, shared, or used for ads. Ever.
-              </p>
+            <div className="hidden sm:block text-zinc-300">•</div>
+            <div className="flex items-center gap-2">
+              <span>🚫</span>
+              <span>No data selling</span>
             </div>
           </div>
+          <p className="text-xs text-zinc-400 mt-6">
+            Built for CommBank, ANZ, NAB, and Bankwest CSV formats
+          </p>
         </div>
       </div>
 
