@@ -5,6 +5,8 @@ import type { Transaction } from '@/lib/normaliser/types'
 interface Props {
   item: ReviewItem
   index: number
+  selected: boolean
+  onSelect: (index: number, checked: boolean) => void
   onChange: (index: number, category: string, subcategory: string | null) => void
 }
 
@@ -18,6 +20,12 @@ function borderClass(item: ReviewItem): string {
   }
 }
 
+const MATCH_TYPE_LABEL: Record<string, string> = {
+  contains: 'contains',
+  starts_with: 'starts with',
+  ends_with: 'ends with',
+}
+
 function ConfidenceBadge({ item }: { item: ReviewItem }) {
   if (item.original.conflict) {
     return <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">Conflict</span>
@@ -25,15 +33,47 @@ function ConfidenceBadge({ item }: { item: ReviewItem }) {
   if (!item.original.confidence) {
     return <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-zinc-100 text-zinc-500">Uncat</span>
   }
-  const styles = {
+  const styles: Record<string, string> = {
     High: 'bg-green-100 text-green-800',
     Medium: 'bg-amber-100 text-amber-800',
     Low: 'bg-red-100 text-red-800',
   }
-  return (
+  const rule = item.original.matchedRule
+  const badge = (
     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${styles[item.original.confidence]}`}>
       {item.original.confidence}
     </span>
+  )
+  if (!rule) return badge
+  return (
+    <div className="relative group inline-flex justify-end">
+      <span className={`px-1.5 py-0.5 rounded text-xs font-medium cursor-default ${styles[item.original.confidence]}`}>
+        {item.original.confidence}
+      </span>
+      <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block z-50 w-60 bg-white border border-zinc-200 rounded-lg shadow-lg p-3 text-left pointer-events-none">
+        <p className="text-xs font-semibold text-zinc-900 mb-2">
+          {rule.userMapped ? 'User defined rule' : 'Default rule'}
+        </p>
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2 text-xs">
+            <span className="text-zinc-400 w-16 shrink-0">Match</span>
+            <span className="font-mono bg-zinc-100 rounded px-1 text-zinc-700">{MATCH_TYPE_LABEL[rule.matchType] ?? rule.matchType}</span>
+          </div>
+          <div className="flex items-start gap-2 text-xs">
+            <span className="text-zinc-400 w-16 shrink-0">Pattern</span>
+            <span className="font-mono bg-zinc-100 rounded px-1 text-zinc-700 break-all">{rule.pattern}</span>
+          </div>
+          <div className="flex items-start gap-2 text-xs">
+            <span className="text-zinc-400 w-16 shrink-0">Category</span>
+            <span className="text-zinc-900">{rule.category}</span>
+          </div>
+          <div className="flex items-start gap-2 text-xs">
+            <span className="text-zinc-400 w-16 shrink-0">Subcategory</span>
+            <span className="text-zinc-900">{rule.subcategory ?? '—'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -43,7 +83,7 @@ function formatAmount(tx: Transaction): { text: string; colour: string } {
   return { text: '', colour: '' }
 }
 
-export default function DraftRow({ item, index, onChange }: Props) {
+export default function DraftRow({ item, index, selected, onSelect, onChange }: Props) {
   const subcategories = getSubcategories(item.category)
   const amount = formatAmount(item.original)
 
@@ -56,7 +96,15 @@ export default function DraftRow({ item, index, onChange }: Props) {
   }
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-100 text-sm ${borderClass(item)} ${item.accepted ? 'opacity-60' : ''}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-100 text-sm ${borderClass(item)} ${item.accepted ? 'opacity-60' : ''} ${selected ? 'bg-blue-50' : ''}`}>
+      {/* Checkbox */}
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={e => onSelect(index, e.target.checked)}
+        className="w-4 h-4 shrink-0 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+      />
+
       {/* Date */}
       <span className="font-mono text-zinc-400 text-xs w-24 shrink-0">{item.original.date}</span>
 

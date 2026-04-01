@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useReviewStore } from '@/lib/store/review'
 import { useHistoryStore } from '@/lib/store/history'
 import { useRulesStore } from '@/lib/store/rules'
+import { DEFAULT_CATEGORIES, getSubcategories } from '@/lib/categories/defaults'
 import DraftRow from '@/components/review/DraftRow'
 import ReclassifyModal from '@/components/review/ReclassifyModal'
 import UncatWarningModal from '@/components/review/UncatWarningModal'
-import CategoryInspector from '@/components/upload/CategoryInspector'
 import type { Transaction } from '@/lib/normaliser/types'
 
 type ConfidenceFilter = 'all' | 'high' | 'medium' | 'low' | 'uncategorised' | 'conflicts'
@@ -18,12 +18,16 @@ const SUPPRESS_KEY = 'brian:suppressUncatWarning'
 
 export default function ReviewPage() {
   const router = useRouter()
-  const { items, fileName, malformed, skippedCount, updateItem, acceptByConfidence, clearBatch } = useReviewStore()
+  const { items, fileName, malformed, skippedCount, updateItem, bulkUpdateItems, acceptByConfidence, clearBatch } = useReviewStore()
   const { addTransactions } = useHistoryStore()
   const { addRule } = useRulesStore()
 
   const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>('all')
   const [uncatVisibility, setUncatVisibility] = useState<UncatVisibility>('show-all')
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
+  const [bulkCategory, setBulkCategory] = useState('')
+  const [bulkSubcategory, setBulkSubcategory] = useState<string | null>(null)
+  const selectAllRef = useRef<HTMLInputElement>(null)
   const [reclassifyQueue, setReclassifyQueue] = useState<Array<{
     index: number
     narration: string
@@ -65,6 +69,45 @@ export default function ReviewPage() {
         }
       })
   }, [items, confidenceFilter, uncatVisibility])
+
+  const allVisibleSelected = filteredItems.length > 0 && filteredItems.every(({ originalIndex }) => selectedIndices.has(originalIndex))
+  const someVisibleSelected = filteredItems.some(({ originalIndex }) => selectedIndices.has(originalIndex))
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someVisibleSelected && !allVisibleSelected
+    }
+  }, [someVisibleSelected, allVisibleSelected])
+
+  function handleSelectAll() {
+    setSelectedIndices(prev => {
+      const next = new Set(prev)
+      if (allVisibleSelected) {
+        filteredItems.forEach(({ originalIndex }) => next.delete(originalIndex))
+      } else {
+        filteredItems.forEach(({ originalIndex }) => next.add(originalIndex))
+      }
+      return next
+    })
+  }
+
+  function handleSelectRow(index: number, checked: boolean) {
+    setSelectedIndices(prev => {
+      const next = new Set(prev)
+      checked ? next.add(index) : next.delete(index)
+      return next
+    })
+  }
+
+  function handleBulkApply() {
+    if (!bulkCategory || selectedIndices.size === 0) return
+    bulkUpdateItems(Array.from(selectedIndices), bulkCategory, bulkSubcategory)
+    setSelectedIndices(new Set())
+    setBulkCategory('')
+    setBulkSubcategory(null)
+  }
+
+  const bulkSubcategories = bulkCategory ? getSubcategories(bulkCategory) : []
 
   function handleChange(index: number, newCategory: string, newSubcategory: string | null) {
     updateItem(index, newCategory, newSubcategory)
@@ -162,11 +205,6 @@ export default function ReviewPage() {
     { key: 'conflicts', label: 'Conflicts', count: counts.conflicts },
   ]
 
-  const inspectorTransactions = useMemo(
-    () => items.map(i => ({ ...i.original, category: i.category, subcategory: i.subcategory })),
-    [items]
-  )
-
   if (items.length === 0) return null
 
   return (
@@ -198,7 +236,7 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <div className={`max-w-6xl mx-auto px-6 py-6 space-y-6 ${selectedIndices.size > 0 ? 'pb-24' : ''}`}>
         {/* Malformed rows warning */}
         {malformed.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -261,6 +299,13 @@ export default function ReviewPage() {
         <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
           {/* Table header */}
           <div className="flex items-center gap-3 px-4 py-2 border-b border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-500 border-l-4 border-l-transparent">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allVisibleSelected}
+              onChange={handleSelectAll}
+              className="w-4 h-4 shrink-0 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
             <span className="w-24 shrink-0">Date</span>
             <span className="flex-1">Narration</span>
             <span className="w-24 text-right shrink-0">Amount</span>
@@ -277,14 +322,13 @@ export default function ReviewPage() {
                 key={originalIndex}
                 item={item}
                 index={originalIndex}
+                selected={selectedIndices.has(originalIndex)}
+                onSelect={handleSelectRow}
                 onChange={handleChange}
               />
             ))
           )}
         </div>
-
-        {/* Phase 4 inspector — temporary */}
-        <CategoryInspector transactions={inspectorTransactions} />
 
         {/* Bottom confirm */}
         <div className="flex justify-end gap-3 pb-6">
@@ -313,6 +357,55 @@ export default function ReviewPage() {
           onSkipRule={handleSkipRule}
           onCancel={() => setReclassifyQueue([])}
         />
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIndices.size > 0 && (
+        <div className="fixed bottom-0 inset-x-0 bg-white border-t border-zinc-200 shadow-lg z-40">
+          <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4 flex-wrap">
+            <span className="text-sm font-medium text-zinc-700 shrink-0">
+              {selectedIndices.size} selected
+            </span>
+            <div className="flex items-center gap-3 flex-1 flex-wrap">
+              <select
+                value={bulkCategory}
+                onChange={e => { setBulkCategory(e.target.value); setBulkSubcategory(null) }}
+                className="border border-zinc-300 rounded-md px-2 py-1.5 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select category…</option>
+                <option value="Uncategorised">Uncategorised</option>
+                {DEFAULT_CATEGORIES.map(cat => (
+                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+              {bulkSubcategories.length > 0 && (
+                <select
+                  value={bulkSubcategory ?? ''}
+                  onChange={e => setBulkSubcategory(e.target.value || null)}
+                  className="border border-zinc-300 rounded-md px-2 py-1.5 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">No subcategory</option>
+                  {bulkSubcategories.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              )}
+              <button
+                onClick={handleBulkApply}
+                disabled={!bulkCategory}
+                className="bg-blue-600 text-white text-sm font-medium py-1.5 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Apply
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedIndices(new Set())}
+              className="text-xs text-zinc-400 hover:text-zinc-600 underline underline-offset-2 shrink-0"
+            >
+              Clear selection
+            </button>
+          </div>
+        </div>
       )}
 
       {showUncatWarning && (

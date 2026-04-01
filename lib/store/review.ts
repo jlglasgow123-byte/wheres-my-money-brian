@@ -15,6 +15,7 @@ interface ReviewStore {
   skippedCount: number
   setBatch: (transactions: Transaction[], fileName: string, malformed: MalformedRow[], skippedCount: number) => void
   updateItem: (index: number, category: string, subcategory: string | null) => void
+  bulkUpdateItems: (indices: number[], category: string, subcategory: string | null) => void
   acceptByConfidence: (confidence: 'High' | 'Medium' | 'Low') => void
   clearBatch: () => void
 }
@@ -44,6 +45,17 @@ export const useReviewStore = create<ReviewStore>((set) => ({
           : item
       ),
     })),
+  bulkUpdateItems: (indices, category, subcategory) =>
+    set(state => {
+      const indexSet = new Set(indices)
+      return {
+        items: state.items.map((item, i) =>
+          indexSet.has(i)
+            ? { ...item, category, subcategory, accepted: category !== 'Uncategorised' }
+            : item
+        ),
+      }
+    }),
   acceptByConfidence: (confidence) =>
     set(state => ({
       items: state.items.map(item =>

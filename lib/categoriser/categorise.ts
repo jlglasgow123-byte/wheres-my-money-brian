@@ -63,6 +63,13 @@ export function categorise(transactions: Transaction[], rules: MappingRule[]): T
           subcategory: best.subcategory,
           confidence: scoreConfidence(best.pattern, tx.narration, best),
           conflict: false,
+          matchedRule: {
+            pattern: best.pattern,
+            matchType: best.matchType ?? 'contains',
+            category: best.category,
+            subcategory: best.subcategory,
+            userMapped: best.userMapped,
+          },
         }
       }
 
@@ -76,6 +83,13 @@ export function categorise(transactions: Transaction[], rules: MappingRule[]): T
       subcategory: rule.subcategory,
       confidence: scoreConfidence(rule.pattern, tx.narration, rule),
       conflict: false,
+      matchedRule: {
+        pattern: rule.pattern,
+        matchType: rule.matchType ?? 'contains',
+        category: rule.category,
+        subcategory: rule.subcategory,
+        userMapped: rule.userMapped,
+      },
     }
   })
 }
