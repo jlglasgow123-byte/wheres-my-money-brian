@@ -6,7 +6,7 @@ import { useHistoryStore } from '@/lib/store/history'
 import { useRulesStore } from '@/lib/store/rules'
 import { useAuthStore, initAuth } from '@/lib/store/auth'
 
-const AUTH_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/forgot-password', '/auth/update-password']
+const AUTH_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/forgot-password', '/auth/update-password', '/help', '/privacy']
 
 export default function DataLoader() {
   const router = useRouter()
