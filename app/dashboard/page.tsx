@@ -497,7 +497,14 @@ export default function DashboardPage() {
                     <XAxis dataKey="cat" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} angle={-35} textAnchor="end" interval={0} />
                     <YAxis tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`} />
                     <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
-                    <Legend verticalAlign="top" wrapperStyle={{ fontSize: 12, paddingBottom: 12 }} />
+                    <Legend
+                      verticalAlign="top"
+                      wrapperStyle={{ fontSize: 12, paddingBottom: 12 }}
+                      payload={[
+                        { value: formatYearMonth(momMonth1), type: 'square', color: '#7B9E3B' },
+                        { value: formatYearMonth(momMonth2), type: 'square', color: '#ffc888' },
+                      ]}
+                    />
                     <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#7B9E3B" radius={[3, 3, 0, 0]} />
                     <Bar dataKey={momMonth2} name={formatYearMonth(momMonth2)} fill="#ffc888" radius={[3, 3, 0, 0]} />
                   </BarChart>
