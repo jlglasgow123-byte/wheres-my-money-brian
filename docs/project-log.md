@@ -38,6 +38,33 @@
 None — no design flaws found that required rework during this phase.
 
 ### Improvements
-- Confirm upfront: does bulk assign need to include user-defined categories? `DraftRow` and the bulk bar both use `DEFAULT_CATEGORIES` only.
+- ~~Confirm upfront: does bulk assign need to include user-defined categories? `DraftRow` and the bulk bar both use `DEFAULT_CATEGORIES` only.~~ → Fixed 2026-04-13. See below.
 - Confirm whether clearing selection after Apply is always the right behaviour.
 - Confirm bulk bar placement preference (fixed bottom) on small screens.
+
+---
+
+## Bug Fix: Custom Categories Not Available in Transaction Review Dropdowns
+
+**Date:** 2026-04-13
+
+### Problem
+Custom categories created on the Rules page were not appearing as options in the category or subcategory dropdowns on the Review (transactions) page. This affected both the per-row dropdowns in `DraftRow` and the bulk action bar.
+
+### Root Cause
+
+`DraftRow.tsx` and `review/page.tsx` both imported `DEFAULT_CATEGORIES` and `getSubcategories` directly from `lib/categories/defaults.ts`. This hardcoded list contains only the 15 built-in categories. The `useAllCategories()` and `useGetSubcategories()` hooks — which merge defaults with user-created categories and subcategories from Supabase — already existed and were correctly used on the Rules page, but were never wired into the review components.
+
+### Fix
+
+- `components/review/DraftRow.tsx` — replaced `DEFAULT_CATEGORIES` / `getSubcategories` imports with `useAllCategories` / `useGetSubcategories` hooks. Category dropdown now renders all categories including custom ones.
+- `app/review/page.tsx` — same replacement. Bulk action category dropdown and subcategory lookup now include custom categories and their subcategories.
+
+### Tests
+
+- Create a custom category with subcategories on the Rules page
+- Upload a statement and go to Review
+- Confirm custom category appears in the per-row category dropdown
+- Confirm custom subcategories appear when that category is selected
+- Confirm custom category appears in the bulk action bar category dropdown
+- Confirm bulk apply works correctly with a custom category

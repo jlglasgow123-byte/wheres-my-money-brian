@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useReviewStore } from '@/lib/store/review'
 import { useHistoryStore } from '@/lib/store/history'
 import { useRulesStore } from '@/lib/store/rules'
-import { DEFAULT_CATEGORIES, getSubcategories } from '@/lib/categories/defaults'
+import { useAllCategories, useGetSubcategories } from '@/lib/categories/useAllCategories'
 import DraftRow from '@/components/review/DraftRow'
 import ReclassifyModal from '@/components/review/ReclassifyModal'
 import UncatWarningModal from '@/components/review/UncatWarningModal'
@@ -21,6 +21,8 @@ export default function ReviewPage() {
   const { items, fileName, malformed, skippedCount, updateItem, bulkUpdateItems, acceptByConfidence, clearBatch } = useReviewStore()
   const { addTransactions } = useHistoryStore()
   const { addRule } = useRulesStore()
+  const allCategories = useAllCategories()
+  const getSubcategories = useGetSubcategories()
 
   const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>('all')
   const [uncatVisibility, setUncatVisibility] = useState<UncatVisibility>('show-all')
@@ -374,7 +376,7 @@ export default function ReviewPage() {
               >
                 <option value="">Select category…</option>
                 <option value="Uncategorised">Uncategorised</option>
-                {DEFAULT_CATEGORIES.map(cat => (
+                {allCategories.map(cat => (
                   <option key={cat.name} value={cat.name}>{cat.name}</option>
                 ))}
               </select>

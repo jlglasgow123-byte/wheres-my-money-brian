@@ -1,5 +1,5 @@
 import type { ReviewItem } from '@/lib/store/review'
-import { DEFAULT_CATEGORIES, getSubcategories } from '@/lib/categories/defaults'
+import { useAllCategories, useGetSubcategories } from '@/lib/categories/useAllCategories'
 import type { Transaction } from '@/lib/normaliser/types'
 
 interface Props {
@@ -84,6 +84,8 @@ function formatAmount(tx: Transaction): { text: string; colour: string } {
 }
 
 export default function DraftRow({ item, index, selected, onSelect, onChange }: Props) {
+  const allCategories = useAllCategories()
+  const getSubcategories = useGetSubcategories()
   const subcategories = getSubcategories(item.category)
   const amount = formatAmount(item.original)
 
@@ -125,7 +127,7 @@ export default function DraftRow({ item, index, selected, onSelect, onChange }: 
         className="w-44 shrink-0 border border-zinc-200 rounded-md px-2 py-1 text-sm font-sans text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="Uncategorised">Uncategorised</option>
-        {DEFAULT_CATEGORIES.map(cat => (
+        {allCategories.map(cat => (
           <option key={cat.name} value={cat.name}>{cat.name}</option>
         ))}
       </select>
