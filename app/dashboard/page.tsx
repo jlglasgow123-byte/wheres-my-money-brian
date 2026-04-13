@@ -29,6 +29,12 @@ const CATEGORY_COLOURS = [
 
 const UNCATEGORISED_COLOUR = '#a9acb6'
 
+const SUBCATEGORY_COLOURS = [
+  '#60a5fa', '#34d399', '#f59e0b', '#f472b6', '#a78bfa',
+  '#fb923c', '#4ade80', '#38bdf8', '#c084fc', '#e879f9',
+  '#86efac', '#fcd34d',
+]
+
 function getPeriodBounds(period: Period): { from: string; to: string } | null {
   const now = new Date()
   if (period === 'This month') {
@@ -134,6 +140,10 @@ export default function DashboardPage() {
 
   // Drilldown panel
   const [drillCategory, setDrillCategory] = useState<string | null>(null)
+  const [drillSubcategory, setDrillSubcategory] = useState<string | null>(null)
+
+  // Subcategory modal
+  const [subcatModal, setSubcatModal] = useState<string | null>(null)
 
   // Month-over-month
   const [momMonth1, setMomMonth1] = useState(getPrevYearMonth(getCurrentYearMonth()))
@@ -187,9 +197,32 @@ export default function DashboardPage() {
   // Drilldown transactions
   const drillTxs = useMemo<Transaction[]>(() => {
     if (!drillCategory) return []
-    return spendingTxs.filter(tx => (tx.category || 'Uncategorised') === drillCategory)
-      .sort((a, b) => (b.debit ?? 0) - (a.debit ?? 0))
-  }, [drillCategory, spendingTxs])
+    let txs = spendingTxs.filter(tx => (tx.category || 'Uncategorised') === drillCategory)
+    if (drillSubcategory) {
+      txs = txs.filter(tx => (tx.subcategory || 'No subcategory') === drillSubcategory)
+    }
+    return txs.sort((a, b) => (b.debit ?? 0) - (a.debit ?? 0))
+  }, [drillCategory, drillSubcategory, spendingTxs])
+
+  // Subcategory breakdown for modal
+  const subcatBreakdown = useMemo(() => {
+    if (!subcatModal) return []
+    const catTxs = spendingTxs.filter(tx => (tx.category || 'Uncategorised') === subcatModal)
+    const total = catTxs.reduce((s, tx) => s + (tx.debit ?? 0), 0)
+    const map = new Map<string, number>()
+    catTxs.forEach(tx => {
+      const sub = tx.subcategory || 'No subcategory'
+      map.set(sub, (map.get(sub) ?? 0) + (tx.debit ?? 0))
+    })
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([sub, amount], i) => ({
+        sub,
+        amount,
+        pct: total > 0 ? (amount / total) * 100 : 0,
+        colour: SUBCATEGORY_COLOURS[i % SUBCATEGORY_COLOURS.length],
+      }))
+  }, [subcatModal, spendingTxs])
 
   const byPeriod = useMemo(() => {
     const map = new Map<string, { label: string; sortKey: string; amount: number }>()
@@ -369,15 +402,15 @@ export default function DashboardPage() {
                           innerRadius={72}
                           outerRadius={105}
                           paddingAngle={2}
-                          onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setDrillCategory(cat === drillCategory ? null : cat) }}
+                          onClick={(d) => { const cat = (d as unknown as { cat: string }).cat; setSubcatModal(cat) }}
                           style={{ cursor: 'pointer' }}
                         >
                           {byCategory.map(({ cat, colour }) => (
                             <Cell
                               key={cat}
                               fill={colour}
-                              opacity={drillCategory && drillCategory !== cat ? 0.35 : 1}
-                              stroke={drillCategory === cat ? '#fff' : 'none'}
+                              opacity={1}
+                              stroke="none"
                               strokeWidth={2}
                             />
                           ))}
@@ -395,8 +428,8 @@ export default function DashboardPage() {
                       {byCategory.map(({ cat, amount, pct, colour }) => (
                         <button
                           key={cat}
-                          onClick={() => setDrillCategory(cat === drillCategory ? null : cat)}
-                          className={`flex items-center gap-2 text-left rounded-lg px-2 py-1 transition-colors ${drillCategory === cat ? 'bg-zinc-100' : 'hover:bg-zinc-50'}`}
+                          onClick={() => setSubcatModal(cat)}
+                          className="flex items-center gap-2 text-left rounded-lg px-2 py-1 transition-colors hover:bg-zinc-50"
                         >
                           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colour }} />
                           <span className="text-xs text-zinc-700 truncate flex-1">{cat}</span>
@@ -404,11 +437,9 @@ export default function DashboardPage() {
                         </button>
                       ))}
                     </div>
-                    {drillCategory && (
-                      <p className="text-xs text-zinc-400 text-center">
-                        Click a category to drill down — or click again to deselect
-                      </p>
-                    )}
+                    <p className="text-xs text-zinc-400 text-center">
+                      Click a category to see subcategory breakdown
+                    </p>
                   </div>
                 )}
               </div>
@@ -596,20 +627,37 @@ export default function DashboardPage() {
         <>
           <div
             className="fixed inset-0 bg-black/20 z-30"
-            onClick={() => setDrillCategory(null)}
+            onClick={() => { setDrillCategory(null); setDrillSubcategory(null) }}
           />
           <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-40 flex flex-col">
             <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200">
-              <div className="flex items-center gap-3">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ background: categoryColourMap.get(drillCategory) ?? '#2d6a4f' }}
-                />
-                <h2 className="text-base font-semibold text-zinc-900">{drillCategory}</h2>
+              <div className="flex items-center gap-3 min-w-0">
+                {drillSubcategory ? (
+                  <button
+                    onClick={() => { setSubcatModal(drillCategory); setDrillCategory(null); setDrillSubcategory(null) }}
+                    className="text-zinc-400 hover:text-zinc-700 transition-colors text-sm leading-none shrink-0"
+                    title="Back to subcategories"
+                  >
+                    ←
+                  </button>
+                ) : (
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ background: categoryColourMap.get(drillCategory) ?? '#2d6a4f' }}
+                  />
+                )}
+                <h2 className="text-base font-semibold text-zinc-900 truncate">
+                  {drillSubcategory ? (
+                    <span>
+                      <span className="text-zinc-400 font-normal">{drillCategory} › </span>
+                      {drillSubcategory}
+                    </span>
+                  ) : drillCategory}
+                </h2>
               </div>
               <button
-                onClick={() => setDrillCategory(null)}
-                className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg leading-none"
+                onClick={() => { setDrillCategory(null); setDrillSubcategory(null) }}
+                className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg leading-none shrink-0 ml-3"
               >
                 ✕
               </button>
@@ -630,6 +678,93 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-red-600 tabular-nums shrink-0">{fmt(tx.debit ?? 0)}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Subcategory breakdown modal */}
+      {subcatModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-50"
+            onClick={() => setSubcatModal(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[90vh]">
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 shrink-0">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0"
+                    style={{ background: categoryColourMap.get(subcatModal) ?? '#2d6a4f' }}
+                  />
+                  <h2 className="text-base font-semibold text-zinc-900">{subcatModal}</h2>
+                </div>
+                <button
+                  onClick={() => setSubcatModal(null)}
+                  className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+                {subcatBreakdown.length === 0 ? (
+                  <p className="text-sm text-zinc-400 text-center py-10">No subcategory data.</p>
+                ) : (
+                  <>
+                    {/* Subcat donut */}
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={subcatBreakdown}
+                          dataKey="amount"
+                          nameKey="sub"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={65}
+                          outerRadius={95}
+                          paddingAngle={2}
+                        >
+                          {subcatBreakdown.map(({ sub, colour }) => (
+                            <Cell key={sub} fill={colour} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value) => [fmt(Number(value ?? 0)), '']}
+                          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }}
+                        />
+                        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize={11} fill="#71717a">Subcategories</text>
+                        <text x="50%" y="57%" textAnchor="middle" dominantBaseline="middle" fontSize={14} fontWeight={700} fill="#18181b">
+                          {fmt(subcatBreakdown.reduce((s, d) => s + d.amount, 0))}
+                        </text>
+                      </PieChart>
+                    </ResponsiveContainer>
+
+                    {/* Subcat list — click to open slide-out */}
+                    <div className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 overflow-hidden">
+                      {subcatBreakdown.map(({ sub, amount, pct, colour }) => (
+                        <button
+                          key={sub}
+                          onClick={() => {
+                            setDrillCategory(subcatModal)
+                            setDrillSubcategory(sub)
+                            setSubcatModal(null)
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-50 transition-colors text-left"
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: colour }} />
+                          <span className="text-sm text-zinc-800 flex-1 truncate">{sub}</span>
+                          <span className="text-xs text-zinc-400 tabular-nums shrink-0">{pct.toFixed(0)}%</span>
+                          <span className="text-sm font-medium text-red-600 tabular-nums shrink-0 w-24 text-right">{fmt(amount)}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-zinc-400 text-center">Click a subcategory to see its transactions</p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </>
