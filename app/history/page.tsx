@@ -82,6 +82,7 @@ export default function TransactionsPage() {
   // Display filters
   const [typeFilter, setTypeFilter] = useState('Income and Spending')
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
+  const [selectedSubcategory, setSelectedSubcategory] = useState('')
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -132,11 +133,19 @@ export default function TransactionsPage() {
     return Array.from(new Set(transactions.map(tx => tx.category).filter(Boolean))).sort()
   }, [transactions])
 
+  const subcatOptions = useMemo(() => {
+    const txs = selectedCategories.size > 0
+      ? transactions.filter(tx => selectedCategories.has(tx.category))
+      : transactions
+    return Array.from(new Set(txs.map(tx => tx.subcategory).filter((s): s is string => !!s))).sort()
+  }, [transactions, selectedCategories])
+
   const filtered = useMemo(() => {
     let result = transactions
     if (typeFilter === 'Spending') result = result.filter(tx => tx.debit != null)
     if (typeFilter === 'Income') result = result.filter(tx => tx.credit != null)
     if (selectedCategories.size > 0) result = result.filter(tx => selectedCategories.has(tx.category))
+    if (selectedSubcategory) result = result.filter(tx => tx.subcategory === selectedSubcategory)
     if (search) result = result.filter(tx => tx.narration.toLowerCase().includes(search.toLowerCase()))
     if (dateFrom) result = result.filter(tx => tx.date >= dateFrom)
     if (dateTo) result = result.filter(tx => tx.date <= dateTo)
@@ -164,11 +173,12 @@ export default function TransactionsPage() {
       next.has(cat) ? next.delete(cat) : next.add(cat)
       return next
     })
+    setSelectedSubcategory('')
     setPage(1)
   }
 
-  function clearCategories() { setSelectedCategories(new Set()); setPage(1) }
-  function selectAllCategories() { setSelectedCategories(new Set(categories)); setPage(1) }
+  function clearCategories() { setSelectedCategories(new Set()); setSelectedSubcategory(''); setPage(1) }
+  function selectAllCategories() { setSelectedCategories(new Set(categories)); setSelectedSubcategory(''); setPage(1) }
 
   const categoryLabel = selectedCategories.size === 0
     ? 'All Categories'
@@ -546,6 +556,27 @@ export default function TransactionsPage() {
                     </div>
                   )}
                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center text-sm text-zinc-600 w-36 shrink-0">
+                  Subcategory
+                </span>
+                <select
+                  value={selectedSubcategory}
+                  onChange={e => { setSelectedSubcategory(e.target.value); setPage(1) }}
+                  disabled={selectedCategories.size === 0}
+                  className="flex-1 border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {selectedCategories.size === 0
+                    ? <option value="">Select a category first</option>
+                    : <>
+                        <option value="">All subcategories</option>
+                        {subcatOptions.map(sub => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </>
+                  }
+                </select>
               </div>
             </div>
           </div>
