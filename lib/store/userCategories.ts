@@ -12,7 +12,9 @@ interface UserCategoryStore {
   loadUserSubcategories: () => Promise<void>
   addUserCategory: (name: string, subcategories: string[]) => Promise<void>
   deleteUserCategory: (name: string) => Promise<void>
+  renameUserCategory: (oldName: string, newName: string) => Promise<void>
   addUserSubcategory: (categoryName: string, subcategoryName: string) => Promise<void>
+  deleteUserSubcategory: (categoryName: string, subcategoryName: string) => Promise<void>
 }
 
 export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
@@ -74,6 +76,34 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
     }))
   },
 
+  renameUserCategory: async (oldName, newName) => {
+    const { error: catError } = await supabase
+      .from('user_categories')
+      .update({ name: newName })
+      .eq('name', oldName)
+    if (catError) { console.error('Failed to rename user category:', catError.message); return }
+
+    // Keep subcategory associations pointing to the new name
+    await supabase
+      .from('user_subcategories')
+      .update({ category_name: newName })
+      .eq('category_name', oldName)
+
+    set(state => {
+      const newUserSubcategories = { ...state.userSubcategories }
+      if (newUserSubcategories[oldName]) {
+        newUserSubcategories[newName] = newUserSubcategories[oldName]
+        delete newUserSubcategories[oldName]
+      }
+      return {
+        userCategories: state.userCategories.map(c =>
+          c.name === oldName ? { ...c, name: newName } : c
+        ),
+        userSubcategories: newUserSubcategories,
+      }
+    })
+  },
+
   addUserSubcategory: async (categoryName, subcategoryName) => {
     const user = await getUser()
     if (!user) return
@@ -91,5 +121,20 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
         },
       }
     })
+  },
+
+  deleteUserSubcategory: async (categoryName, subcategoryName) => {
+    const { error } = await supabase
+      .from('user_subcategories')
+      .delete()
+      .eq('category_name', categoryName)
+      .eq('subcategory_name', subcategoryName)
+    if (error) { console.error('Failed to delete user subcategory:', error.message); return }
+    set(state => ({
+      userSubcategories: {
+        ...state.userSubcategories,
+        [categoryName]: (state.userSubcategories[categoryName] ?? []).filter(s => s !== subcategoryName),
+      },
+    }))
   },
 }))
