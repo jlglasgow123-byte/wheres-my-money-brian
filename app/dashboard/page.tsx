@@ -530,11 +530,19 @@ export default function DashboardPage() {
                     <Tooltip formatter={(value) => [fmt(Number(value ?? 0)), '']} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e4e4e7' }} />
                     <Legend
                       verticalAlign="top"
-                      wrapperStyle={{ fontSize: 12, paddingBottom: 12 }}
-                      payload={[
-                        { value: formatYearMonth(momMonth1), type: 'square', color: '#7B9E3B' },
-                        { value: formatYearMonth(momMonth2), type: 'square', color: '#ffc888' },
-                      ]}
+                      content={() => (
+                        <div style={{ display: 'flex', gap: 16, fontSize: 12, paddingBottom: 12 }}>
+                          {[
+                            { label: formatYearMonth(momMonth1), colour: '#7B9E3B' },
+                            { label: formatYearMonth(momMonth2), colour: '#ffc888' },
+                          ].map(({ label, colour }) => (
+                            <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <span style={{ display: 'inline-block', width: 12, height: 12, background: colour, borderRadius: 2 }} />
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     />
                     <Bar dataKey={momMonth1} name={formatYearMonth(momMonth1)} fill="#7B9E3B" radius={[3, 3, 0, 0]} />
                     <Bar dataKey={momMonth2} name={formatYearMonth(momMonth2)} fill="#ffc888" radius={[3, 3, 0, 0]} />
