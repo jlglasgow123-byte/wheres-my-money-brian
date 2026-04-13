@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getAvailableBanks, getParser } from '@/lib/parsers/registry'
 import { normalise } from '@/lib/normaliser/normalise'
 import { detectDuplicates } from '@/lib/duplicate/detect'
-import { categorise } from '@/lib/categoriser/categorise'
 import { useHistoryStore } from '@/lib/store/history'
-import { useRulesStore } from '@/lib/store/rules'
 import { useReviewStore } from '@/lib/store/review'
 import DuplicateSummary from '@/components/upload/DuplicateSummary'
 import DuplicateModal from '@/components/upload/DuplicateModal'
@@ -42,7 +40,6 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const banks = getAvailableBanks()
   const { transactions: history } = useHistoryStore()
-  const { rules } = useRulesStore()
   const { setBatch } = useReviewStore()
 
   function resolveState(
@@ -51,8 +48,7 @@ export default function UploadPage() {
     malformed: MalformedRow[],
     fileName: string
   ) {
-    const categorised = categorise(toImport, rules)
-    setBatch(categorised, fileName, malformed, skippedCount)
+    setBatch(toImport, fileName, malformed, skippedCount)
     router.push('/review')
   }
 
