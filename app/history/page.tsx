@@ -160,7 +160,7 @@ export default function TransactionsPage() {
       result = result.filter(tx => (tx.debit ?? tx.credit ?? 0) <= max)
     }
     return result
-  }, [transactions, typeFilter, selectedCategories, search, dateFrom, dateTo, importDateFrom, importDateTo, amountMin, amountMax])
+  }, [transactions, typeFilter, selectedCategories, selectedSubcategory, search, dateFrom, dateTo, importDateFrom, importDateTo, amountMin, amountMax])
 
   const totalDebit = filtered.reduce((sum, tx) => sum + (tx.debit ?? 0), 0)
   const totalCredit = filtered.reduce((sum, tx) => sum + (tx.credit ?? 0), 0)
