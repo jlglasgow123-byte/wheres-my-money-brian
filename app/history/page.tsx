@@ -82,9 +82,11 @@ export default function TransactionsPage() {
   // Display filters
   const [typeFilter, setTypeFilter] = useState('Income and Spending')
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
-  const [selectedSubcategory, setSelectedSubcategory] = useState('')
+  const [selectedSubcategories, setSelectedSubcategories] = useState<Set<string>>(new Set())
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
+  const [subcategoryDropdownOpen, setSubcategoryDropdownOpen] = useState(false)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
+  const subcategoryDropdownRef = useRef<HTMLDivElement>(null)
 
   // Search filters
   const [search, setSearch] = useState('')
@@ -124,6 +126,9 @@ export default function TransactionsPage() {
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
         setCategoryDropdownOpen(false)
       }
+      if (subcategoryDropdownRef.current && !subcategoryDropdownRef.current.contains(e.target as Node)) {
+        setSubcategoryDropdownOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -145,7 +150,7 @@ export default function TransactionsPage() {
     if (typeFilter === 'Spending') result = result.filter(tx => tx.debit != null)
     if (typeFilter === 'Income') result = result.filter(tx => tx.credit != null)
     if (selectedCategories.size > 0) result = result.filter(tx => selectedCategories.has(tx.category))
-    if (selectedSubcategory) result = result.filter(tx => tx.subcategory === selectedSubcategory)
+    if (selectedSubcategories.size > 0) result = result.filter(tx => selectedSubcategories.has(tx.subcategory ?? ''))
     if (search) result = result.filter(tx => tx.narration.toLowerCase().includes(search.toLowerCase()))
     if (dateFrom) result = result.filter(tx => tx.date >= dateFrom)
     if (dateTo) result = result.filter(tx => tx.date <= dateTo)
@@ -160,7 +165,7 @@ export default function TransactionsPage() {
       result = result.filter(tx => (tx.debit ?? tx.credit ?? 0) <= max)
     }
     return result
-  }, [transactions, typeFilter, selectedCategories, selectedSubcategory, search, dateFrom, dateTo, importDateFrom, importDateTo, amountMin, amountMax])
+  }, [transactions, typeFilter, selectedCategories, selectedSubcategories, search, dateFrom, dateTo, importDateFrom, importDateTo, amountMin, amountMax])
 
   const totalDebit = filtered.reduce((sum, tx) => sum + (tx.debit ?? 0), 0)
   const totalCredit = filtered.reduce((sum, tx) => sum + (tx.credit ?? 0), 0)
@@ -173,18 +178,38 @@ export default function TransactionsPage() {
       next.has(cat) ? next.delete(cat) : next.add(cat)
       return next
     })
-    setSelectedSubcategory('')
+    setSelectedSubcategories(new Set())
     setPage(1)
   }
 
-  function clearCategories() { setSelectedCategories(new Set()); setSelectedSubcategory(''); setPage(1) }
-  function selectAllCategories() { setSelectedCategories(new Set(categories)); setSelectedSubcategory(''); setPage(1) }
+  function clearCategories() { setSelectedCategories(new Set()); setSelectedSubcategories(new Set()); setPage(1) }
+  function selectAllCategories() { setSelectedCategories(new Set(categories)); setSelectedSubcategories(new Set()); setPage(1) }
+
+  function toggleSubcategory(sub: string) {
+    setSelectedSubcategories(prev => {
+      const next = new Set(prev)
+      next.has(sub) ? next.delete(sub) : next.add(sub)
+      return next
+    })
+    setPage(1)
+  }
+
+  function clearSubcategories() { setSelectedSubcategories(new Set()); setPage(1) }
+  function selectAllSubcategories() { setSelectedSubcategories(new Set(subcatOptions)); setPage(1) }
 
   const categoryLabel = selectedCategories.size === 0
     ? 'All Categories'
     : selectedCategories.size === 1
       ? Array.from(selectedCategories)[0]
       : `${selectedCategories.size} categories`
+
+  const subcategoryLabel = selectedCategories.size === 0
+    ? 'Select a category first'
+    : selectedSubcategories.size === 0
+      ? 'All subcategories'
+      : selectedSubcategories.size === 1
+        ? Array.from(selectedSubcategories)[0]
+        : `${selectedSubcategories.size} subcategories`
 
   async function handleDelete() {
     if (!pendingDelete) return
@@ -561,22 +586,38 @@ export default function TransactionsPage() {
                 <span className="flex items-center text-sm text-zinc-600 w-36 shrink-0">
                   Subcategory
                 </span>
-                <select
-                  value={selectedSubcategory}
-                  onChange={e => { setSelectedSubcategory(e.target.value); setPage(1) }}
-                  disabled={selectedCategories.size === 0}
-                  className="flex-1 border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {selectedCategories.size === 0
-                    ? <option value="">Select a category first</option>
-                    : <>
-                        <option value="">All subcategories</option>
-                        {subcatOptions.map(sub => (
-                          <option key={sub} value={sub}>{sub}</option>
-                        ))}
-                      </>
-                  }
-                </select>
+                <div ref={subcategoryDropdownRef} className="relative flex-1">
+                  <button
+                    onClick={() => { if (selectedCategories.size > 0) setSubcategoryDropdownOpen(o => !o) }}
+                    disabled={selectedCategories.size === 0}
+                    className="w-full flex items-center gap-2 border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 bg-white hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="flex-1 text-left truncate">{subcategoryLabel}</span>
+                    <span className="text-zinc-400 shrink-0">▾</span>
+                  </button>
+                  {subcategoryDropdownOpen && selectedCategories.size > 0 && (
+                    <div className="absolute z-20 mt-1 w-full bg-white border border-zinc-200 rounded-xl shadow-lg py-1">
+                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-100">
+                        <span className="text-xs font-medium text-zinc-500">Subcategories</span>
+                        {selectedSubcategories.size === subcatOptions.length
+                          ? <button onClick={clearSubcategories} className="text-xs text-zinc-400 hover:text-zinc-700">Clear selection</button>
+                          : <button onClick={selectAllSubcategories} className="text-xs text-zinc-400 hover:text-zinc-700">Select all</button>
+                        }
+                      </div>
+                      <div className="max-h-52 overflow-y-auto">
+                        {subcatOptions.length === 0
+                          ? <p className="px-3 py-2 text-sm text-zinc-400">No subcategories found</p>
+                          : subcatOptions.map(sub => (
+                            <label key={sub} className="flex items-center gap-2.5 px-3 py-2 hover:bg-zinc-50 cursor-pointer">
+                              <input type="checkbox" checked={selectedSubcategories.has(sub)} onChange={() => toggleSubcategory(sub)} className="accent-green-600" />
+                              <span className="text-sm text-zinc-800">{sub}</span>
+                            </label>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -624,7 +665,7 @@ export default function TransactionsPage() {
           <div className="md:col-span-2 flex justify-end pt-2 border-t border-zinc-100">
             <button
               onClick={() => {
-                setTypeFilter('Income and Spending'); setSelectedCategories(new Set()); setSelectedSubcategory(''); setSearch('')
+                setTypeFilter('Income and Spending'); setSelectedCategories(new Set()); setSelectedSubcategories(new Set()); setSearch('')
                 setDateFrom(''); setDateTo(''); setImportDateFrom(''); setImportDateTo('')
                 setAmountMin(''); setAmountMax(''); setPage(1)
               }}
