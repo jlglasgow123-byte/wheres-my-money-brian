@@ -624,7 +624,7 @@ export default function TransactionsPage() {
           <div className="md:col-span-2 flex justify-end pt-2 border-t border-zinc-100">
             <button
               onClick={() => {
-                setTypeFilter('Income and Spending'); setSelectedCategories(new Set()); setSearch('')
+                setTypeFilter('Income and Spending'); setSelectedCategories(new Set()); setSelectedSubcategory(''); setSearch('')
                 setDateFrom(''); setDateTo(''); setImportDateFrom(''); setImportDateTo('')
                 setAmountMin(''); setAmountMax(''); setPage(1)
               }}
