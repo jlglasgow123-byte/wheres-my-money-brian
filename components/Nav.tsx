@@ -30,7 +30,7 @@ export default function Nav() {
   }
 
   return (
-    <nav className="bg-green-50 border-b border-green-200 px-6 py-3">
+    <nav className="bg-white border-b border-zinc-200 px-6 py-3">
       <div className="max-w-6xl mx-auto flex items-center gap-8">
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <Image src="/brian_logo.png" alt="Brian" width={28} height={28} />
