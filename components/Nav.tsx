@@ -67,20 +67,22 @@ export default function Nav() {
         </Link>
         <div className="flex items-center gap-1 flex-1">
           {links.map(link => {
-            const isActive = link.href === '/'
+            const href = isDemoMode && link.href === '/home' ? '/demo' : link.href
+            const label = isDemoMode && link.href === '/home' ? 'Demo' : link.label
+            const isActive = href === '/'
               ? pathname === '/'
-              : pathname.startsWith(link.href)
+              : pathname.startsWith(href)
             return (
               <Link
                 key={link.href}
-                href={link.href}
+                href={href}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-[#399605]/10 text-[#399605] font-semibold'
                     : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
                 }`}
               >
-                {link.label}
+                {label}
               </Link>
             )
           })}
