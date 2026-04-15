@@ -12,7 +12,7 @@ const AUTH_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/forgot-
 export default function DataLoader() {
   const router = useRouter()
   const pathname = usePathname()
-  const { user, loading: authLoading } = useAuthStore()
+  const { user, loading: authLoading, isDemoMode } = useAuthStore()
   const { loadTransactions, loaded: historyLoaded } = useHistoryStore()
   const { loadRules, loaded: rulesLoaded } = useRulesStore()
   const { loadUserCategories, loadUserSubcategories, loaded: categoriesLoaded } = useUserCategoryStore()
@@ -23,6 +23,15 @@ export default function DataLoader() {
 
   useEffect(() => {
     if (authLoading) return
+
+    if (isDemoMode) {
+      if (!historyLoaded) loadTransactions()
+      if (!rulesLoaded) loadRules()
+      if (!categoriesLoaded) loadUserCategories()
+      loadUserSubcategories()
+      return
+    }
+
     if (!user) {
       if (!AUTH_PATHS.some(p => pathname.startsWith(p))) {
         router.replace('/landing')
@@ -33,7 +42,7 @@ export default function DataLoader() {
     if (!rulesLoaded) loadRules()
     if (!categoriesLoaded) loadUserCategories()
     loadUserSubcategories()
-  }, [user, authLoading, pathname])
+  }, [user, authLoading, isDemoMode, pathname])
 
   return null
 }

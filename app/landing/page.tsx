@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import DemoButton from '@/components/DemoButton'
 
 export default function LandingPage() {
   return (
@@ -56,6 +57,7 @@ export default function LandingPage() {
           >
             Sign in
           </Link>
+          <DemoButton />
         </div>
       </div>
 

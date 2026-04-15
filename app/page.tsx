@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { getAvailableBanks, getParser } from '@/lib/parsers/registry'
 import { normalise } from '@/lib/normaliser/normalise'
 import { detectDuplicates } from '@/lib/duplicate/detect'
 import { useHistoryStore } from '@/lib/store/history'
 import { useReviewStore } from '@/lib/store/review'
+import { useAuthStore } from '@/lib/store/auth'
 import DuplicateSummary from '@/components/upload/DuplicateSummary'
 import DuplicateModal from '@/components/upload/DuplicateModal'
 import type { MalformedRow, Transaction } from '@/lib/normaliser/types'
@@ -41,6 +43,23 @@ export default function UploadPage() {
   const banks = getAvailableBanks()
   const { transactions: history } = useHistoryStore()
   const { setBatch } = useReviewStore()
+  const { isDemoMode } = useAuthStore()
+
+  if (isDemoMode) {
+    return (
+      <main className="min-h-screen bg-zinc-50 flex flex-col items-center pt-24 px-6">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-xl border border-zinc-200 p-8 text-center">
+            <p className="text-zinc-900 font-semibold mb-2">CSV upload is disabled in demo mode</p>
+            <p className="text-sm text-zinc-500 mb-6">Sign up for a free account to upload your own transactions.</p>
+            <Link href="/signup" className="px-5 py-2 rounded-lg text-sm font-semibold text-white inline-block transition-opacity hover:opacity-90" style={{ background: '#399605' }}>
+              Get started free
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   function resolveState(
     toImport: Transaction[],

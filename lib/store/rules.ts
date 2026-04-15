@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase/client'
 import { getUser } from '@/lib/supabase/auth'
 import type { MappingRule } from '@/lib/categoriser/types'
 import { DEFAULT_RULES } from '@/lib/categoriser/defaultRules'
+import { useAuthStore } from '@/lib/store/auth'
 
 interface RulesStore {
   rules: MappingRule[]
@@ -37,10 +38,14 @@ function fromRow(row: Record<string, unknown>): MappingRule {
   }
 }
 
-export const useRulesStore = create<RulesStore>((set, get) => ({
+export const useRulesStore = create<RulesStore>((set) => ({
   rules: [...DEFAULT_RULES],
   loaded: false,
   loadRules: async () => {
+    if (useAuthStore.getState().isDemoMode) {
+      set({ rules: [...DEFAULT_RULES], loaded: true })
+      return
+    }
     const { data, error } = await supabase
       .from('mapping_rules')
       .select('*')
@@ -61,30 +66,36 @@ export const useRulesStore = create<RulesStore>((set, get) => ({
     }
   },
   addRule: async (rule) => {
-    const user = await getUser()
-    if (!user) { console.error('Cannot save rule: not authenticated'); return }
-    const { error } = await supabase.from('mapping_rules').insert({ ...toRow(rule), user_id: user.id })
-    if (error) { console.error('Failed to add rule:', error.message, '|', error.code, '|', error.details); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const user = await getUser()
+      if (!user) { console.error('Cannot save rule: not authenticated'); return }
+      const { error } = await supabase.from('mapping_rules').insert({ ...toRow(rule), user_id: user.id })
+      if (error) { console.error('Failed to add rule:', error.message, '|', error.code, '|', error.details); return }
+    }
     set(state => ({ rules: [...state.rules, rule] }))
   },
   updateRule: async (id, updates) => {
-    const dbUpdates: Record<string, unknown> = {}
-    if (updates.pattern !== undefined) dbUpdates.pattern = updates.pattern
-    if (updates.matchType !== undefined) dbUpdates.match_type = updates.matchType
-    if (updates.caseSensitive !== undefined) dbUpdates.case_sensitive = updates.caseSensitive
-    if (updates.category !== undefined) dbUpdates.category = updates.category
-    if (updates.subcategory !== undefined) dbUpdates.subcategory = updates.subcategory
-    if (updates.userMapped !== undefined) dbUpdates.user_mapped = updates.userMapped
+    if (!useAuthStore.getState().isDemoMode) {
+      const dbUpdates: Record<string, unknown> = {}
+      if (updates.pattern !== undefined) dbUpdates.pattern = updates.pattern
+      if (updates.matchType !== undefined) dbUpdates.match_type = updates.matchType
+      if (updates.caseSensitive !== undefined) dbUpdates.case_sensitive = updates.caseSensitive
+      if (updates.category !== undefined) dbUpdates.category = updates.category
+      if (updates.subcategory !== undefined) dbUpdates.subcategory = updates.subcategory
+      if (updates.userMapped !== undefined) dbUpdates.user_mapped = updates.userMapped
 
-    const { error } = await supabase.from('mapping_rules').update(dbUpdates).eq('id', id)
-    if (error) { console.error('Failed to update rule:', error); return }
+      const { error } = await supabase.from('mapping_rules').update(dbUpdates).eq('id', id)
+      if (error) { console.error('Failed to update rule:', error); return }
+    }
     set(state => ({
       rules: state.rules.map(r => r.id === id ? { ...r, ...updates } : r),
     }))
   },
   deleteRule: async (id) => {
-    const { error } = await supabase.from('mapping_rules').delete().eq('id', id)
-    if (error) { console.error('Failed to delete rule:', error); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error } = await supabase.from('mapping_rules').delete().eq('id', id)
+      if (error) { console.error('Failed to delete rule:', error); return }
+    }
     set(state => ({ rules: state.rules.filter(r => r.id !== id) }))
   },
 }))

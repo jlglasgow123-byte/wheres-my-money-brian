@@ -6,6 +6,33 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store/auth'
 import { signOut } from '@/lib/supabase/auth'
 
+function DemoBanner() {
+  return (
+    <div className="bg-amber-50 border-b border-amber-200 px-6 py-2">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        <span className="text-sm text-amber-800">
+          Demo mode — changes are lost on refresh.
+        </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs font-medium text-amber-700 hover:text-amber-900 underline underline-offset-2 transition-colors"
+          >
+            Reset demo
+          </button>
+          <Link
+            href="/signup"
+            className="px-3 py-1 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: '#399605' }}
+          >
+            Sign up free
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const links = [
   { href: '/home', label: 'Home' },
   { href: '/', label: 'Upload' },
@@ -20,7 +47,7 @@ const HIDDEN_PATHS = ['/landing', '/login', '/signup', '/auth/callback', '/priva
 export default function Nav() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuthStore()
+  const { user, isDemoMode } = useAuthStore()
 
   if (HIDDEN_PATHS.some(p => pathname.startsWith(p))) return null
 
@@ -30,6 +57,8 @@ export default function Nav() {
   }
 
   return (
+    <>
+    {isDemoMode && <DemoBanner />}
     <nav className="bg-white border-b border-zinc-200 px-6 py-3">
       <div className="max-w-6xl mx-auto flex items-center gap-8">
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
@@ -69,5 +98,6 @@ export default function Nav() {
         )}
       </div>
     </nav>
+    </>
   )
 }

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase/client'
 import { getUser } from '@/lib/supabase/auth'
 import type { CategoryDef } from '@/lib/categories/defaults'
+import { useAuthStore } from '@/lib/store/auth'
 
 interface UserCategoryStore {
   userCategories: CategoryDef[]
@@ -23,6 +24,10 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
   loaded: false,
 
   loadUserCategories: async () => {
+    if (useAuthStore.getState().isDemoMode) {
+      set({ userCategories: [], loaded: true })
+      return
+    }
     const { data, error } = await supabase
       .from('user_categories')
       .select('name, subcategories')
@@ -38,6 +43,10 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
   },
 
   loadUserSubcategories: async () => {
+    if (useAuthStore.getState().isDemoMode) {
+      set({ userSubcategories: {} })
+      return
+    }
     const { data, error } = await supabase
       .from('user_subcategories')
       .select('category_name, subcategory_name')
@@ -54,41 +63,45 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
   },
 
   addUserCategory: async (name, subcategories) => {
-    const user = await getUser()
-    if (!user) return
-    const { error } = await supabase
-      .from('user_categories')
-      .insert({ user_id: user.id, name, subcategories })
-    if (error) { console.error('Failed to add user category:', error.message); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const user = await getUser()
+      if (!user) return
+      const { error } = await supabase
+        .from('user_categories')
+        .insert({ user_id: user.id, name, subcategories })
+      if (error) { console.error('Failed to add user category:', error.message); return }
+    }
     set(state => ({
       userCategories: [...state.userCategories, { name, subcategories }],
     }))
   },
 
   deleteUserCategory: async (name) => {
-    const { error } = await supabase
-      .from('user_categories')
-      .delete()
-      .eq('name', name)
-    if (error) { console.error('Failed to delete user category:', error.message); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error } = await supabase
+        .from('user_categories')
+        .delete()
+        .eq('name', name)
+      if (error) { console.error('Failed to delete user category:', error.message); return }
+    }
     set(state => ({
       userCategories: state.userCategories.filter(c => c.name !== name),
     }))
   },
 
   renameUserCategory: async (oldName, newName) => {
-    const { error: catError } = await supabase
-      .from('user_categories')
-      .update({ name: newName })
-      .eq('name', oldName)
-    if (catError) { console.error('Failed to rename user category:', catError.message); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error: catError } = await supabase
+        .from('user_categories')
+        .update({ name: newName })
+        .eq('name', oldName)
+      if (catError) { console.error('Failed to rename user category:', catError.message); return }
 
-    // Keep subcategory associations pointing to the new name
-    await supabase
-      .from('user_subcategories')
-      .update({ category_name: newName })
-      .eq('category_name', oldName)
-
+      await supabase
+        .from('user_subcategories')
+        .update({ category_name: newName })
+        .eq('category_name', oldName)
+    }
     set(state => {
       const newUserSubcategories = { ...state.userSubcategories }
       if (newUserSubcategories[oldName]) {
@@ -105,12 +118,14 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
   },
 
   addUserSubcategory: async (categoryName, subcategoryName) => {
-    const user = await getUser()
-    if (!user) return
-    const { error } = await supabase
-      .from('user_subcategories')
-      .insert({ user_id: user.id, category_name: categoryName, subcategory_name: subcategoryName })
-    if (error) { console.error('Failed to add user subcategory:', error.message); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const user = await getUser()
+      if (!user) return
+      const { error } = await supabase
+        .from('user_subcategories')
+        .insert({ user_id: user.id, category_name: categoryName, subcategory_name: subcategoryName })
+      if (error) { console.error('Failed to add user subcategory:', error.message); return }
+    }
     set(state => {
       const existing = state.userSubcategories[categoryName] ?? []
       if (existing.includes(subcategoryName)) return state
@@ -124,12 +139,14 @@ export const useUserCategoryStore = create<UserCategoryStore>((set) => ({
   },
 
   deleteUserSubcategory: async (categoryName, subcategoryName) => {
-    const { error } = await supabase
-      .from('user_subcategories')
-      .delete()
-      .eq('category_name', categoryName)
-      .eq('subcategory_name', subcategoryName)
-    if (error) { console.error('Failed to delete user subcategory:', error.message); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error } = await supabase
+        .from('user_subcategories')
+        .delete()
+        .eq('category_name', categoryName)
+        .eq('subcategory_name', subcategoryName)
+      if (error) { console.error('Failed to delete user subcategory:', error.message); return }
+    }
     set(state => ({
       userSubcategories: {
         ...state.userSubcategories,

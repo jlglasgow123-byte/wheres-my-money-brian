@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { supabase } from '@/lib/supabase/client'
 import { getUser } from '@/lib/supabase/auth'
 import type { Transaction } from '@/lib/normaliser/types'
+import { useAuthStore } from '@/lib/store/auth'
+import { DEMO_TRANSACTIONS } from '@/lib/demo/seed'
 
 interface HistoryStore {
   transactions: Transaction[]
@@ -60,6 +62,10 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
   transactions: [],
   loaded: false,
   loadTransactions: async () => {
+    if (useAuthStore.getState().isDemoMode) {
+      set({ transactions: [...DEMO_TRANSACTIONS], loaded: true })
+      return
+    }
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -68,6 +74,7 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
     set({ transactions: (data ?? []).map(fromRow), loaded: true })
   },
   addTransactions: async (txs) => {
+    if (useAuthStore.getState().isDemoMode) return
     const user = await getUser()
     if (!user) { console.error('Cannot save transactions: not authenticated'); return }
     const rows = txs.map(tx => ({ ...toRow(tx), user_id: user.id }))
@@ -77,11 +84,13 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
     set(state => ({ transactions: [...saved, ...state.transactions] }))
   },
   updateTransaction: async (id, category, subcategory) => {
-    const { error } = await supabase
-      .from('transactions')
-      .update({ category, subcategory })
-      .eq('id', id)
-    if (error) { console.error('Failed to update transaction:', error); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ category, subcategory })
+        .eq('id', id)
+      if (error) { console.error('Failed to update transaction:', error); return }
+    }
     set(state => ({
       transactions: state.transactions.map(tx =>
         tx.id === id ? { ...tx, category, subcategory } : tx
@@ -89,11 +98,13 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
     }))
   },
   bulkUpdateCategory: async (ids, category, subcategory) => {
-    const { error } = await supabase
-      .from('transactions')
-      .update({ category, subcategory })
-      .in('id', ids)
-    if (error) { console.error('Failed to bulk update transactions:', error); return }
+    if (!useAuthStore.getState().isDemoMode) {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ category, subcategory })
+        .in('id', ids)
+      if (error) { console.error('Failed to bulk update transactions:', error); return }
+    }
     set(state => ({
       transactions: state.transactions.map(tx =>
         ids.includes(tx.id ?? '') ? { ...tx, category, subcategory } : tx
@@ -101,6 +112,7 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
     }))
   },
   deleteTransaction: async (id) => {
+    if (useAuthStore.getState().isDemoMode) return
     const { error } = await supabase.from('transactions').delete().eq('id', id)
     if (error) { console.error('Failed to delete transaction:', error); return }
     set(state => ({ transactions: state.transactions.filter(tx => tx.id !== id) }))
