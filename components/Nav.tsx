@@ -34,10 +34,9 @@ function DemoBanner() {
 }
 
 const links = [
-  { href: '/home', label: 'Home' },
   { href: '/', label: 'Upload' },
   { href: '/history', label: 'Transactions' },
-  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/insights', label: 'Insights' },
   { href: '/rules', label: 'Rules' },
   { href: '/help', label: 'Help' },
 ]
@@ -66,23 +65,33 @@ export default function Nav() {
           <span className="text-sm font-semibold text-zinc-900">Brian</span>
         </Link>
         <div className="flex items-center gap-1 flex-1">
+          {isDemoMode && (
+            <Link
+              href="/demo"
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                pathname.startsWith('/demo')
+                  ? 'bg-[#399605]/10 text-[#399605] font-semibold'
+                  : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+              }`}
+            >
+              Demo
+            </Link>
+          )}
           {links.map(link => {
-            const href = isDemoMode && link.href === '/home' ? '/demo' : link.href
-            const label = isDemoMode && link.href === '/home' ? 'Demo' : link.label
-            const isActive = href === '/'
+            const isActive = link.href === '/'
               ? pathname === '/'
-              : pathname.startsWith(href)
+              : pathname.startsWith(link.href)
             return (
               <Link
                 key={link.href}
-                href={href}
+                href={link.href}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-[#399605]/10 text-[#399605] font-semibold'
                     : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
                 }`}
               >
-                {label}
+                {link.label}
               </Link>
             )
           })}

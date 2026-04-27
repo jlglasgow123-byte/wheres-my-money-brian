@@ -20,7 +20,7 @@ export default function LoginPage() {
     const { error } = await signInWithEmail(email, password)
     setLoading(false)
     if (error) { setError(error.message); return }
-    router.replace('/dashboard')
+    router.replace('/insights')
   }
 
   async function handleGoogleLogin() {

@@ -26,7 +26,7 @@ export default function SignupPage() {
     const { error } = await signUpWithEmail(email, password)
     setLoading(false)
     if (error) { setError(error.message); return }
-    router.replace('/dashboard')
+    router.replace('/insights')
   }
 
   async function handleGoogleSignup() {
