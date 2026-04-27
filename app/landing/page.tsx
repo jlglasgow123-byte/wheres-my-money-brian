@@ -14,7 +14,7 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link href="/help" className="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">
-            FAQ
+            Help
           </Link>
           <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">
             Sign in

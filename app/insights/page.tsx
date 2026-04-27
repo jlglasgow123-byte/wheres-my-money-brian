@@ -431,7 +431,7 @@ export default function InsightsPage() {
                       Your last upload was <span className="font-semibold">{weeksText} ago</span>. Your charts only show what&apos;s been imported.
                     </p>
                     <Link
-                      href="/"
+                      href="/upload"
                       className="shrink-0 px-4 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors whitespace-nowrap"
                     >
                       Upload latest transactions →
@@ -499,7 +499,7 @@ export default function InsightsPage() {
                     </ResponsiveContainer>
                     {/* Legend */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                      {byCategory.map(({ cat, amount, pct, colour }) => (
+                      {byCategory.map(({ cat, pct, colour }) => (
                         <button
                           key={cat}
                           onClick={() => setSubcatModal(cat)}

@@ -514,7 +514,7 @@ export default function TransactionsPage() {
                 </button>
               )}
               <Link
-                href="/"
+                href="/upload"
                 className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ background: '#399605' }}
               >

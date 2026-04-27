@@ -34,7 +34,7 @@ function DemoBanner() {
 }
 
 const links = [
-  { href: '/', label: 'Upload' },
+  { href: '/upload', label: 'Upload' },
   { href: '/history', label: 'Transactions' },
   { href: '/insights', label: 'Insights' },
   { href: '/rules', label: 'Rules' },
@@ -60,7 +60,7 @@ export default function Nav() {
     {isDemoMode && <DemoBanner />}
     <nav className="bg-white border-b border-zinc-200 px-6 py-3">
       <div className="max-w-6xl mx-auto flex items-center gap-8">
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+        <Link href="/landing" className="flex items-center gap-2.5 shrink-0">
           <Image src="/brian_logo.png" alt="Brian" width={28} height={28} />
           <span className="text-sm font-semibold text-zinc-900">Brian</span>
         </Link>
