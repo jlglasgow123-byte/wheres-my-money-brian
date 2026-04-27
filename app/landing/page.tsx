@@ -30,19 +30,34 @@ export default function LandingPage() {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <Image src="/Fav2BRIAN.png" alt="Brian" width={100} height={100} priority className="mb-6" />
-        <h1 className="text-5xl font-bold text-zinc-900 mb-4 tracking-tight max-w-xl">
-          Where did your money actually go?
+      <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
+        <Image src="/Fav2BRIAN.png" alt="Brian" width={88} height={88} priority className="mb-8" />
+        <h1 className="text-5xl font-bold text-zinc-900 mb-5 tracking-tight max-w-xl leading-tight">
+          You&apos;re leaking money.<br />Brian shows you where.
         </h1>
-        <p className="text-lg text-zinc-500 max-w-md mb-3">
-          Upload your bank CSV and find out in seconds.
+        <p className="text-lg text-zinc-500 max-w-lg mb-8 leading-relaxed">
+          Upload your bank CSV and Brian turns your transactions into plain-English spending insights — leaks, subscriptions, categories, and monthly totals.
         </p>
-        <p className="text-sm text-zinc-400 mb-10">
-          No bank login. No scraping. No third-party access.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 items-center">
-          <DemoButton label="Try demo (no upload)" variant="primary" />
+
+        {/* Bullet points */}
+        <ul className="flex flex-col gap-2 mb-10 text-sm text-zinc-600 text-left">
+          <li className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: '#399605' }}>✓</span>
+            See your total monthly spend in seconds
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: '#399605' }}>✓</span>
+            Find your biggest spending leaks
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs shrink-0" style={{ background: '#399605' }}>✓</span>
+            Spot subscriptions and repeat charges fast
+          </li>
+        </ul>
+
+        {/* CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center mb-4">
+          <DemoButton label="Try demo — no upload" variant="primary" />
           <Link
             href="/signup"
             className="px-8 py-3 rounded-xl font-semibold text-base text-zinc-600 border border-zinc-200 hover:border-zinc-300 hover:text-zinc-900 transition-colors"
@@ -50,19 +65,25 @@ export default function LandingPage() {
             Upload my CSV
           </Link>
         </div>
+        <p className="text-xs text-zinc-400">
+          No budgeting guilt. No spreadsheets. Just the uncomfortable truth.
+        </p>
       </div>
 
-      {/* ── Insights Preview ───────────────────────────────────────── */}
+      {/* ── Demo Snapshot ──────────────────────────────────────────── */}
       <div className="border-t border-zinc-100 px-6 py-16 bg-zinc-50">
         <div className="max-w-lg mx-auto">
           <p className="text-center text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
-            Example insights
+            Demo insight
           </p>
-          <h2 className="text-2xl font-bold text-zinc-900 text-center mb-8">
-            Know exactly where it went
+          <h2 className="text-2xl font-bold text-zinc-900 text-center mb-3">
+            This is what Brian shows you in seconds
           </h2>
+          <p className="text-center text-sm text-zinc-500 mb-8">
+            Most people think they know where their money goes. Brian makes it painfully obvious.
+          </p>
 
-          {/* Mock app card */}
+          {/* Demo card */}
           <div className="relative">
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
 
@@ -120,13 +141,17 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Fade overlay — signals "preview only" */}
+            {/* Fade overlay */}
             <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-50 to-transparent rounded-b-2xl pointer-events-none" />
           </div>
 
-          {/* CTA beneath preview */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-            <DemoButton label="Try demo (no upload)" variant="primary" />
+          <p className="text-center text-xs text-zinc-400 mt-5 mb-8">
+            This is demo data. Yours might be more interesting. Or worse.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <DemoButton label="Try demo — no upload" variant="primary" />
             <Link
               href="/signup"
               className="px-8 py-3 rounded-xl font-semibold text-base text-zinc-600 border border-zinc-200 hover:border-zinc-300 hover:text-zinc-900 transition-colors text-center"
@@ -140,76 +165,147 @@ export default function LandingPage() {
       {/* ── How it works ───────────────────────────────────────────── */}
       <div className="border-t border-zinc-100 px-6 py-16">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl font-bold text-zinc-900 text-center mb-10">How it works</h2>
+          <p className="text-center text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+            How it works
+          </p>
+          <h2 className="text-2xl font-bold text-zinc-900 text-center mb-12">
+            Three steps. Zero financial wizardry.
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 text-center">
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base mb-4" style={{ background: '#399605' }}>1</div>
               <Image src="/Upload_transactions_icon.png" alt="" width={60} height={60} className="mb-4" />
-              <h3 className="font-semibold text-zinc-900 mb-2">Export from your bank</h3>
+              <h3 className="font-semibold text-zinc-900 mb-2">Try the demo first</h3>
               <p className="text-sm text-zinc-500">
-                Download a CSV from Bankwest, CommBank, ANZ, or NAB. Takes 30 seconds.
+                See example insights instantly without uploading anything.
               </p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base mb-4" style={{ background: '#399605' }}>2</div>
               <Image src="/categorise_icon.png" alt="" width={60} height={60} className="mb-4" />
-              <h3 className="font-semibold text-zinc-900 mb-2">Brian categorises everything</h3>
+              <h3 className="font-semibold text-zinc-900 mb-2">Upload your CSV</h3>
               <p className="text-sm text-zinc-500">
-                Brian automatically sorts your transactions into categories. Correct anything you disagree with.
+                Use an exported bank transaction file when you&apos;re ready to see your own numbers.
               </p>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base mb-4" style={{ background: '#399605' }}>3</div>
               <Image src="/Understand_icon.png" alt="" width={60} height={60} className="mb-4" />
-              <h3 className="font-semibold text-zinc-900 mb-2">See where it actually went</h3>
+              <h3 className="font-semibold text-zinc-900 mb-2">Brian finds the patterns</h3>
               <p className="text-sm text-zinc-500">
-                Spending breakdowns, money leaks, subscription totals — based on your real transactions.
+                Get totals, categories, repeat charges, subscriptions, and your biggest leaks.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Trust signals ──────────────────────────────────────────── */}
+      {/* ── What Brian finds ───────────────────────────────────────── */}
       <div className="border-t border-zinc-100 px-6 py-16 bg-zinc-50">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl font-bold text-zinc-900 text-center mb-10">Your data stays yours</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🔒</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">No bank login required</h3>
-              <p className="text-sm text-zinc-500">
-                No bank login. No scraping. No third-party access. You upload a CSV — nothing more.
-              </p>
+          <p className="text-center text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+            What you get
+          </p>
+          <h2 className="text-2xl font-bold text-zinc-900 text-center mb-10">
+            Brian turns transaction chaos into<br />&ldquo;ohhh, that&apos;s where it went.&rdquo;
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white border border-zinc-200 rounded-xl p-6">
+              <p className="text-base font-semibold text-zinc-900 mb-1">Spending leaks</p>
+              <p className="text-sm text-zinc-500">Find the places quietly draining your money.</p>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🇦🇺</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">Australian privacy compliant</h3>
-              <p className="text-sm text-zinc-500">
-                Built in compliance with the Privacy Act 1988 and Australian Privacy Principles.
-              </p>
+            <div className="bg-white border border-zinc-200 rounded-xl p-6">
+              <p className="text-base font-semibold text-zinc-900 mb-1">Subscriptions</p>
+              <p className="text-sm text-zinc-500">See repeat charges and monthly subscription totals.</p>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="text-3xl mb-3">🚫</div>
-              <h3 className="font-semibold text-zinc-900 mb-2">No data selling. Ever.</h3>
-              <p className="text-sm text-zinc-500">
-                Your transaction data is never sold, shared, or used for advertising. Period.
-              </p>
+            <div className="bg-white border border-zinc-200 rounded-xl p-6">
+              <p className="text-base font-semibold text-zinc-900 mb-1">Category breakdowns</p>
+              <p className="text-sm text-zinc-500">Understand where your money actually goes each month.</p>
+            </div>
+            <div className="bg-white border border-zinc-200 rounded-xl p-6">
+              <p className="text-base font-semibold text-zinc-900 mb-1">Month-to-month changes</p>
+              <p className="text-sm text-zinc-500">See what went up, what changed, and what needs attention.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Trust / Privacy ────────────────────────────────────────── */}
+      <div className="border-t border-zinc-100 px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-center text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-2">
+            Privacy
+          </p>
+          <h2 className="text-2xl font-bold text-zinc-900 text-center mb-4">
+            Your money data should not feel like a trap.
+          </h2>
+          <p className="text-center text-sm text-zinc-500 mb-10 max-w-xl mx-auto">
+            Brian is designed to show insights from your transaction data without making you hand over more than necessary.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className="flex items-start gap-3 bg-zinc-50 border border-zinc-100 rounded-xl px-5 py-4">
+              <span className="text-lg mt-0.5">🕹️</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">Demo works without uploading</p>
+                <p className="text-xs text-zinc-500 mt-0.5">See how Brian works before sharing any data at all.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-zinc-50 border border-zinc-100 rounded-xl px-5 py-4">
+              <span className="text-lg mt-0.5">📄</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">You control what you upload</p>
+                <p className="text-xs text-zinc-500 mt-0.5">CSV upload means you choose what to provide — no bank login, no scraping.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-zinc-50 border border-zinc-100 rounded-xl px-5 py-4">
+              <span className="text-lg mt-0.5">🔒</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">No bank login ever</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Brian never asks for bank credentials, account access, or third-party integrations.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 bg-zinc-50 border border-zinc-100 rounded-xl px-5 py-4">
+              <span className="text-lg mt-0.5">🚫</span>
+              <div>
+                <p className="text-sm font-semibold text-zinc-900">No data selling. Ever.</p>
+                <p className="text-xs text-zinc-500 mt-0.5">Your transaction data is never sold, shared, or used for advertising.</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Supported banks ────────────────────────────────────────── */}
-      <div className="border-t border-zinc-100 px-6 py-12">
+      <div className="border-t border-zinc-100 px-6 py-12 bg-zinc-50">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-4">Supported banks</p>
-          <div className="flex flex-wrap justify-center gap-6 text-sm font-medium text-zinc-600">
+          <div className="flex flex-wrap justify-center gap-3 text-sm font-medium text-zinc-600">
             <span className="px-4 py-2 bg-white border border-zinc-200 rounded-lg">Bankwest</span>
             <span className="px-4 py-2 bg-white border border-zinc-200 rounded-lg">CommBank</span>
             <span className="px-4 py-2 bg-white border border-zinc-200 rounded-lg">ANZ</span>
             <span className="px-4 py-2 bg-white border border-zinc-200 rounded-lg">NAB</span>
             <span className="px-4 py-2 bg-white border border-zinc-200 rounded-lg">Macquarie</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Final CTA ──────────────────────────────────────────────── */}
+      <div className="border-t border-zinc-100 px-6 py-20">
+        <div className="max-w-lg mx-auto text-center">
+          <h2 className="text-3xl font-bold text-zinc-900 mb-4 tracking-tight">
+            Ready to find out where it went?
+          </h2>
+          <p className="text-base text-zinc-500 mb-8">
+            Start with demo mode. No upload. No commitment. Just see what Brian can show you.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <DemoButton label="Try demo — no upload" variant="primary" />
+            <Link
+              href="/signup"
+              className="px-8 py-3 rounded-xl font-semibold text-base text-zinc-600 border border-zinc-200 hover:border-zinc-300 hover:text-zinc-900 transition-colors text-center"
+            >
+              Upload my CSV
+            </Link>
           </div>
         </div>
       </div>
